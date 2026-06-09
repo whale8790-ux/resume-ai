@@ -490,7 +490,6 @@ const WORKSPACE_NAV = [
   { id: "editor", label: "简历编辑", icon: "FilePenLine" },
   { id: "jobs", label: "职位推荐", icon: "BriefcaseBusiness" },
   { id: "interview", label: "面试闪卡", icon: "PanelsTopLeft" },
-  { id: "mentor", label: "AI导师", icon: "ChartNoAxesCombined" },
 ];
 
 function WorkspaceSidebar({ active, onChange, onSettings }) {

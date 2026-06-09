@@ -6895,10 +6895,6 @@ const WORKSPACE_NAV = [{
   id: "interview",
   label: "面试闪卡",
   icon: "PanelsTopLeft"
-}, {
-  id: "mentor",
-  label: "AI导师",
-  icon: "ChartNoAxesCombined"
 }];
 function WorkspaceSidebar({
   active,
