@@ -1,0 +1,2994 @@
+const JOB_STATUS_OPTIONS = [
+  { value: "not_evaluated", label: "待评估" },
+  { value: "preparing", label: "准备投递" },
+  { value: "applied", label: "已投递" },
+  { value: "screening", label: "简历筛选" },
+  { value: "interview_1", label: "一面" },
+  { value: "interview_2", label: "二面" },
+  { value: "final_interview", label: "终面" },
+  { value: "offer", label: "Offer" },
+  { value: "rejected", label: "已拒绝" },
+  { value: "withdrawn", label: "已放弃" },
+];
+
+const MATCH_ANALYSIS_CACHE_KEY = "resume_ai_match_analysis_v1";
+const JOB_CHAT_CACHE_KEY = "resume_ai_job_chat_v1";
+
+function loadMatchAnalysisCache() {
+  try {
+    const value = JSON.parse(localStorage.getItem(MATCH_ANALYSIS_CACHE_KEY) || "{}");
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function persistMatchAnalysisCache(value) {
+  localStorage.setItem(MATCH_ANALYSIS_CACHE_KEY, JSON.stringify(value));
+  return value;
+}
+
+function loadJobChatCache() {
+  try {
+    const value = JSON.parse(localStorage.getItem(JOB_CHAT_CACHE_KEY) || "{}");
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+  } catch (_) {
+    return {};
+  }
+}
+
+function persistJobChatCache(value) {
+  localStorage.setItem(JOB_CHAT_CACHE_KEY, JSON.stringify(value));
+  return value;
+}
+
+const MOCK_JOBS = [
+  {
+    "id": "job_fs_001",
+    "externalRecordId": "rec48ccBlU",
+    "title": "AI Coding策略产品经理-TRAE",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "AI Coding策略产品经理-TRAE",
+    "responsibilities": [
+      "通过数据等途径深入挖掘AI Coding用户群体（涵盖初级开发者、资深工程师、企业研发团队等）的使用场景、需求痛点与操作习惯，输出详细的用户画像与需求分析报告；",
+      "与模型算法、工程技术、评测等团队紧密合作，完成策略迭代、效果评测、产品功能上线等落地项目；",
+      "跟踪产品上线后的用户反馈，通过用户访谈、问卷调研、数据分析等方式，持续优化产品使用方式，迭代产品功能，适应不断变化的用户需求与市场环境；",
+      "深入洞察用户需求与AI模型能力，不断开展产品创新思考。"
+    ],
+    "requirements": [
+      "1、1年以上搜索/推荐策略产品经验，有AI/内容策略等相关领域经验加分；",
+      "2、具备良好的需求洞察力、良好的逻辑分析能力、产品策略判断能力、质量标准抽象能力以及跨团队协作能力；",
+      "3、工作细致、踏实、严谨，具备高度的责任心和良好的抗压能力、协同能力，善于学习、主动学习、独立思考；",
+      "4、具备较好的目标感及逻辑思维能力，对数据敏感，视角多元，能站在用户视角深刻理解理想态；",
+      "5、具备算法、计算机背景，有代码编程能力优先，AI编程工具重度使用者优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7562398777563482373/detail"
+  },
+  {
+    "id": "job_fs_002",
+    "externalRecordId": "rechtusTJw",
+    "title": "推荐策略产品（独立端）-抖音电商",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "推荐策略产品（独立端）-抖音电商",
+    "responsibilities": [
+      "负责抖音电商商城推荐策略，优化商品卡&内容体裁的推荐策略，极致优化推荐效率，达成电商业务目标；",
+      "基于抖音商城不同的流量场景差异化设计推荐策略，持续挖掘用户在抖音全域的兴趣信号提高人货匹配效率；",
+      "深入理解电商行业，洞察商家&达人需求和痛点，与技术、运营等团队紧密合作，推进推荐策略迭代、落地。"
+    ],
+    "requirements": [
+      "1、策略产品经验，电商行业/推荐策略等相关经验加分；",
+      "2、具备较强的数据分析能力，拥有强烈的责任心和团队合作精神，出色的学习能力，具备强烈的好奇心和自我驱动力，喜欢接受挑战，追求极致；",
+      "3、具有良好表达和跨团队沟通能力、较强的逻辑思维能力、自驱力和抗压力。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7497181975184132370/detail"
+  },
+  {
+    "id": "job_fs_003",
+    "externalRecordId": "recAVqPXJH",
+    "title": "AI产品经理-即梦",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "职位 ID：A251743A",
+    "responsibilities": [
+      "负责即梦AI创作产品的规划与设计，深度参与文生图、文生视频、创作Agent、智能画布、灵感社区等核心模块的体验迭代；",
+      "将前沿的AI技术转化为卓越的用户价值，与算法、工程、设计等团队紧密协作，定义清晰的产品路线图，并推动高质量交付；",
+      "以用户为中心，驱动产品创新，深入洞察创作者在不同场景下的需求与痛点，通过用户访谈、数据分析等方式，挖掘产品机会，持续优化用户体验；",
+      "建立并完善AIGC创作产品的核心指标体系（如创作效率、作品质量、用户增长与留存等），运用数据驱动与A/B实验的方法，快速验证产品假设，实现产品目标的快速迭代；",
+      "关注AIGC内容生态的健康与安全，具备高度的AIGC安全和合规意识，设计和实施有效的产品策略，确保内容质量与社区氛围。"
+    ],
+    "requirements": [
+      "1、本科及以上学历，对AI技术有深入的理解，熟悉LLM、AI Agent、多模态、扩散模型（Diffusion Model）、视频生成等技术的基本原理、能力边界与应用潜力；",
+      "2、具备卓越的用户意识、丰富的产品想象力与强烈的好奇心，能从用户视角出发，设计出创新、易用且富有吸引力的产品功能；",
+      "3、拥有出色的沟通协作能力与项目推进能力，能胜任跨职能、跨文化背景的复杂协作，确保项目顺利推进并达成目标；",
+      "4、具备优秀的数据分析能力和指标体系建设经验，能够熟练运用数据指导产品决策，有从0到1或大规模用户增长的成功案例者优先；",
+      "5、对AIGC领域充满热情，是相关产品的深度用户，有独立思考和见解。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7593296525797132597/detail"
+  },
+  {
+    "id": "job_fs_004",
+    "externalRecordId": "recv9BL69G4wCX",
+    "title": "资深产品经理（AI方向）-TikTok Shop",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "资深产品经理（AI方向）-TikTok Shop",
+    "responsibilities": [
+      "负责国际化电商AI产品设计，系统解决电商业务中的内容创作、商家经营等核心问题；",
+      "深入理解内容制作流程和痛点，设计行业最好的垂直Agent产品；",
+      "关注行业新的技术和创作趋势，能够洞察商家的需求变化制定产品策略，确保产品的创新性和市场竞争力；",
+      "与运营、工程、算法等团队协同合作，推动产品迭代和业务目标达成，对关键数据指标负责。"
+    ],
+    "requirements": [
+      "1、本科及以上学历，有生成式模型或视频Agent产品相关经验，对AIGC产业有热情，对技术发展敏感，熟悉视频生成各类产品的设计思路和场景；",
+      "2、是主流AI创作平台的深度用户，深度了解平面设计、影视创作等核心场景的创作方式和工作流程，能设计符合专业创作者习惯的产品体验；",
+      "3、具备优秀的产品团队领导力和跨团队协作能力；",
+      "4、有海外产品经理工作经验，或英语可作为工作语言。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7574272525165873461/detail"
+  },
+  {
+    "id": "job_fs_005",
+    "externalRecordId": "recv9BMt7qNTa7",
+    "title": "高级抖音产品经理-音乐AIGC方向",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "高级抖音产品经理-音乐AIGC方向",
+    "responsibilities": [
+      "负责推动音乐领域的AIGC大模型建设及场景化应用创新，提升创作效率&音乐模型理解能力；",
+      "对相关产品开展竞品调研、业务调研、用户调研，输出调研结论和相关分析建议；",
+      "与研发、设计等团队深度合作，负责产品方案的落地及功能实现，对落地实际效果和用户体验负责；",
+      "参与用户场景研究，对AI落地和应用有思考并有所创新，持续提升产品易用性；",
+      "跟进产品使用效果，梳理并持续完善业务流程，达到降本增效的目的。"
+    ],
+    "requirements": [
+      "1、本科学历及以上，有相关工作经验优先；",
+      "2、有需求拆解和抽象能力，对相关技术实现有判断力，用户体验敏感，有研发背景或者AI产品经验优先；",
+      "3、具备较强的学习能力和资源协调能力，能够推进跨团队合作项目落地；",
+      "4、逻辑清晰，能透过现象看本质，系统地思考与解决问题，能全局性的统筹协调复杂业务；",
+      "5、对LLM感兴趣，深度体验LLM且有自己思考的优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7319777835936401673/detail"
+  },
+  {
+    "id": "job_fs_006",
+    "externalRecordId": "recv9BMMuzYHEB",
+    "title": "Gen-AI产品经理-剪映CapCut",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "Gen-AI产品经理-剪映CapCut",
+    "responsibilities": [
+      "负责剪映CapCut国际化产品AI创作模块的产品规划与落地，创意性结合生成式AI模型能力和实际用户场景，设计AI产品；",
+      "与算法团队协作定义效果目标、评估标准和优化路径，基于模型能力探索新的产品形态和交互方式；",
+      "通过数据分析和用户反馈持续优化产品体验，保证产品快速迭代；",
+      "与设计、算法、工程、运营等团队紧密合作，有效协同各方资源，共同达成业务目标。"
+    ],
+    "requirements": [
+      "1、本科及以上学历，3年以上互联网产品工作经验；",
+      "2、理解生成式AI模型，理解主流AI模型的基本原理和能力边界，判断产品想法的技术可行性，与算法团队就效果目标、数据需求、优化方向进行有效沟通；",
+      "3、用户意识强，对用户创作需求和创作习惯有深刻理解，关注体验细节，通过数据和反馈验证产品假设；",
+      "4、对AI产品有热情，有创造性的产品思维，能基于模型能力，设计创新产品形态，对AI产品和行业趋势保持关注；",
+      "5、有视频编辑、图像处理或内容创作类产品经验、有AI产品从0到1的落地经验者加分，剪辑、创作深度用户优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7572146141740337461/detail"
+  },
+  {
+    "id": "job_fs_007",
+    "externalRecordId": "recv9BMWj5eHgU",
+    "title": "产品经理（社交玩法方向）-抖音",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "产品经理（社交玩法方向）-抖音",
+    "responsibilities": [
+      "负责抖音社交玩法（如火花、群种树），对玩法DAU等指标负责；",
+      "深入研究用户需求，并结合数据分析等手段，对现有玩法的问题进行判断，输出解决方案并高效落地；",
+      "深入研究用户等级体系，结合抖音社交的业务状态，创新探索新的等级体系。"
+    ],
+    "requirements": [
+      "1、本科及以上学历，计算机等研发类专业优先，具有1年以上互联网产品经验，有社交产品经验优先；",
+      "2、具备较好的逻辑思维，对数据敏感，学习能力和成长意识佳；",
+      "3、目标导向，自驱力和执行力强，具备较好沟通能力，能独立跨团队推进项目落地并拿到结果，能够快速适应变化。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7533152089993677063/detail"
+  },
+  {
+    "id": "job_fs_008",
+    "externalRecordId": "recv9BOqazdHMj",
+    "title": "AI产品经理-CapCut",
+    "company": "字节",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责CapCut的AI模块和功能的产品设计及优化，有效结合AI技术应用和用户实际需求，持续改进与优化产品，提升AI剪辑效率；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，3年以上互联网产品工作经验；",
+      "2、对产品有热情，逻辑性好，创新能力强，有较好的交互设计能力；有工具类、AI类产品经验者加分，剪辑/创作深度用户优先；",
+      "3、用户意识强，对用户创作需求和创作习惯有深刻理解；",
+      "4、目标与结果导向，有较好的执行力；有较强的自驱力、学习能力、逻辑与沟通能力。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7545399855431518482/detail"
+  },
+  {
+    "id": "job_fs_009",
+    "externalRecordId": "recv9BOFemau0r",
+    "title": "国际化流量策略产品经理-TikTok",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "国际化流量策略产品经理-TikTok",
+    "responsibilities": [
+      "负责TikTok内容分发工作，包括但不限于跨国流量分发、多体裁流量分配、各业务流量合理性平衡等，基于用户洞察、供需分析，提升推荐系统全局流量效率；",
+      "与多业务深度协作，结合业务诉求，发现内容发布-内容审核-推荐流量分发流程中的关键问题，制定阶段性流量调节目标，落地策略提升用户体验；",
+      "构建相关基础设施，包括但不限于流量问题发现、用户理解、内容理解，并完成复杂策略设计；",
+      "设计客观的策略与目标评估体系&方法，完成不同推荐策略的效果验证并持续优化。"
+    ],
+    "requirements": [
+      "1、本科及以上学历，3年以上产品或策略经验，深入理解内容推荐流程及基本原理，有内容策略、调度策略、商品推荐等策略产品经验、算法技术经验者及计算机学科背景优先；",
+      "2、逻辑清晰，有责任感和目标感，对所负责方向有明确、合理的拆解思路和运营规划，能自驱目标达成；",
+      "3、数据思维强，能制定负责方向的整体数据评估逻辑和评估指标；",
+      "4、良好的英文沟通协作和项目管理能力，抗压力强有韧性，长期主义，有海外学习或工作经历者优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7243634726530828600/detail"
+  },
+  {
+    "id": "job_fs_010",
+    "externalRecordId": "recv9BTS4D1Wki",
+    "title": "番茄小说内容策略产品经理",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "番茄小说内容策略产品经理",
+    "responsibilities": [
+      "负责番茄网文、音频、短剧、音乐体裁的内容生态相关工作，包括但不限于围绕体裁特性制定冷启动规则、推荐逻辑调优等；",
+      "通过定性和定量分析，制定内容调优/分人群泛化/治理等具体策略措施，与算法、运营、产品等团队合作，为分体裁内容竞争力和内容生态结果负责；",
+      "持续挖掘不同体裁的用户需求，优化内容生产/分发/消费环节的关键问题，有效落地分发策略达成目标；",
+      "对内容有深入的理解，能敏捷分析番茄系各体裁内容生态变化，善于发现问题并提供策略解决方案，最终实现生态优化。"
+    ],
+    "requirements": [
+      "1、3年及以上产品工作经验，具备好的内容理解力，对内容产品感兴趣，有创作者平台供给、分发相关经验优先；",
+      "2、良好的数据分析能力和逻辑能力，能有效通过数据发现问题，有算法团队合作经验者优先；",
+      "3、有良好的跨部门沟通协调、项目管理、策略能力，对工作有责任心。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7416249779950340362/detail"
+  },
+  {
+    "id": "job_fs_011",
+    "externalRecordId": "recv9BUSw6I8oc",
+    "title": "抖音音乐策略产品经理",
+    "company": "字节",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "职位 ID：A132301",
+    "responsibilities": [
+      "负责汽水音乐内容分发策略，协同算法研发团队，以消费侧体验收益为导向，持续迭代推荐策略及分发相关产品功能；",
+      "关注业务核心数据指标，通过定量分析和定性关注，明确影响用户增长和体验的内容问题，制定相关优化策略；",
+      "建设并优化内容流量调控体系，对内容质量敏感，以生态健康为导向，完善内容生态建设的全流程。"
+    ],
+    "requirements": [
+      "1、本科及以上学历，3年以上策略产品经验优先，熟悉内容型产品，音乐爱好者优先；",
+      "2、有出色的逻辑能力和数据分析能力；",
+      "3、有出色的学习能力，良好的沟通能力和团队合作精神，善于推动内外部团队协作。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7220291709447260477/detail"
+  },
+  {
+    "id": "job_fs_012",
+    "externalRecordId": "recv9BWvM9SwYi",
+    "title": "QQ游戏-产品策划-新星引力计划上海",
+    "company": "腾讯",
+    "location": "上海",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "QQ游戏-产品策划-新星引力计划上海",
+    "responsibilities": [
+      "负责平台产品功能的设计与优化，包括用户体系、资源投放体系、游戏引入和接入体系等；",
+      "通过用户反馈与市场调研，理解玩家诉求，寻找基于平台的创新模式及潜在机会；",
+      "持续监控负责产品模块的运行效果，运用数据分析与用户调研手段，挖掘用户行为背后的潜在需求，将洞察转化为产品迭代策略，实现产品的持续优化与升级；",
+      "把控产品执行的各个环节，统筹协调设计，开发，测试，运营等团队高效运作，高质量完成功能落地，实现产品目标。"
+    ],
+    "requirements": [
+      "1.本科及以上学历，2年及以上工作经验，有平台类产品经验优先；",
+      "2.具备清晰且框架完整的逻辑思维能力，能独立规划功能策划及落地执行；",
+      "3.善于思考、总结及探索尝试，具备优秀的数据分析能力；",
+      "4.具有优秀的沟通能力和抗压能力，主观能动性强，思维活跃，对业务富有激情和责任感；",
+      "5.有一定游戏经历，理解各品类游戏用户，对用户及行业有较高的敏感度。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://careers.tencent.com/jobdesc.html?postId=1984422348790587392"
+  },
+  {
+    "id": "job_fs_013",
+    "externalRecordId": "recv9BWAICKPJj",
+    "title": "元宝-大模型策略产品经理",
+    "company": "腾讯",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "元宝-大模型策略产品经理北京",
+    "responsibilities": [
+      "优化Agent能力，通过包括不限于RAG、Tools、Memory等方式，不断提升用户体验；",
+      "了解行业最新动态，并总结产品创新路径，探索行业最佳实践；",
+      "抽象沉淀通用组建和能力，完善Agent平台能力，提升业务迭代效率。"
+    ],
+    "requirements": [
+      "1.本科及以上学历，3年以上C端产品经验，有创新用户体验或用户增长经验优先；",
+      "2.逻辑思维能力，沟通协作能力强，能跨团队高效协作，推动目标达成；",
+      "3.有Agent实操经验，或大模型创新产品经验优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://careers.tencent.com/jobdesc.html?postId=1985572949758992384"
+  },
+  {
+    "id": "job_fs_014",
+    "externalRecordId": "recv9BX5PXXGjE",
+    "title": "元宝- AI产品经理（教育方向）",
+    "company": "腾讯",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "元宝- AI产品经理（教育方向）北京",
+    "responsibilities": [
+      "负责元宝教育相关的产品规划和落地，与策略、算法、工程、设计团队协作，围绕核心学习场景进行功能设计和迭代；",
+      "深入理解学生真实学习需求与使用场景，将教育目标转化为可落地的 AI 产品方案，并在具体功能中形成清晰、稳定的用户体验；",
+      "深度理解大模型相关技术的发展趋势与能力边界，在产品设计上合理展示模型智能，并保持产品结构对模型持续迭代的扩展性；",
+      "对产品体验和学习效果高度敏感，通过数据分析、用户反馈和分析，持续优化产品使用深度、留存及学习效果。"
+    ],
+    "requirements": [
+      "1.本科及以上学历，3 年及以上产品经理经验，有 C 端 App 产品经验，教育类或工具类产品经验优先。对产品体验细节敏感，关注真实用户价值；",
+      "2.对教育和学习场景有真实理解与兴趣，能够区分不同功能下的用户使用目标（如答疑、讲解、练习、评估）；",
+      "3.对 AI 产品有持续使用习惯和热情，理解大语言模型的基本能力与局限，能够将模型能力转化为清晰、可控的产品设计；",
+      "4.具备良好的学习能力、结构化思考能力和跨团队沟通能力，能与策略、算法、工程、设计等角色高效协作。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://careers.tencent.com/jobdesc.html?postId=2005940702072164352"
+  },
+  {
+    "id": "job_fs_015",
+    "externalRecordId": "recv9BXt54m66Q",
+    "title": "QQ浏览器-内容策略产品经理（漫剧分发方向）",
+    "company": "腾讯",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "QQ浏览器-内容策略产品经理（漫剧分发方向）北京",
+    "responsibilities": [
+      "负责QQ浏览器的漫剧相关功能与策略设计，提升端内多体裁（短剧/漫剧等）的增长与留存，并探索新的内容体裁方向；",
+      "通过数据分析和定性观察等方式，挖掘需求痛点，提出假设及解决方案，推动产品持续创新；",
+      "协调内外部资源，推进产品项目全流程的高效运转，保证产品策略高质量落地。"
+    ],
+    "requirements": [
+      "1.3年以上内容策略/内容生态运营经验，熟悉推荐算法逻辑；",
+      "2.具备强内容敏感度，对二次元、网文、短视频等泛娱乐领域有浓厚兴趣，熟悉动态漫画的内容形态或连载生态，对Z世代、热血向用户偏好有较为深刻的理解；",
+      "3.良好的数据能力，熟练使用数据分析工具，能通过数据驱动决策；",
+      "4.良好的跨部门协作能力，逻辑清晰，沟通高效。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://careers.tencent.com/jobdesc.html?postId=1990357138756755456"
+  },
+  {
+    "id": "job_fs_016",
+    "externalRecordId": "recv9BY1M10ka0",
+    "title": "视频用户产品经理",
+    "company": "小红书",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "工作地点：深圳市，北京市",
+    "responsibilities": [
+      "负责视频类产品框架的功能迭代和策略设计，精细化的满足社区用户在视频场景的用户诉求，提升用户留存； 2、对于负责的核心场景页面，全局最优的设计产品框架逻辑，平衡各类型诉求，升级视频容器消费体验； 3、与技术、设计、算法团队密切协作，推动产品动线优化和策略落地，对视频消费体验和用户满意度负责"
+    ],
+    "requirements": [
+      "1、C端产品经验、善于代入用户视角感受和构思产品 2、有足够的产品视野，可在复杂系统中辩证看待决策项，兼具用户/策略产品经验为佳 3、自驱且思辨，是以产品owner身份创作产品而非机械执行命令 4、有责任心、对帮助用户保有热情、具备一定抗压能力"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://job.xiaohongshu.com/social/position/18000"
+  },
+  {
+    "id": "job_fs_017",
+    "externalRecordId": "recv9BYjRMA6fp",
+    "title": "AI策略产品经理",
+    "company": "小红书",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "工作地点：北京市，上海市",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "职位要求 - 本科及以上学历，1 年以上策略产品经验 - 对AI产品有热情和好奇心，了解大模型技术原理，有较强的自驱学习能力 - 数据敏感，有较好的数据分析与指标体系设计能力 - 优秀的跨团队沟通推动能力"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://job.xiaohongshu.com/social/position/18000"
+  },
+  {
+    "id": "job_fs_018",
+    "externalRecordId": "recv9BZ5N9idNu",
+    "title": "社区体验产品（流量策略）-T&S",
+    "company": "小红书",
+    "location": "北京",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "社区体验产品（流量策略）-T&S",
+    "responsibilities": [
+      "根据用户在消费侧的负反馈信号，面向不同消费人群，制定问题内容的干预策略，降低举报率、负评率，优化用户的消费体验； 2、基于数据、用户调研和产品思考，定位平台治理和用户体验之间的夹角问题，并给出系统性的解决方案，落地成产品能力； 3、监控体验核心指标，推动跨团队协作，和算法、推荐侧共同做功，推进体验优化项目落地，拿到体验优化在业务侧的收益。"
+    ],
+    "requirements": [
+      "1、本科及以上学历，了解推荐系统或有推荐策略产品经验的优先； 2、优秀的数据分析、问题洞察能力和逻辑思维能力，能够从数据中发现问题和机会，并进行策略改进； 3、具备强自驱力 ，不限于经验主意，打破常规、积极探索策略迭代，寻求多种解决方案； 4、能处理负责协同关系，具备较强的团队协作能力和执行力。 5、有比较强的抗打击能力，有韧性。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://job.xiaohongshu.com/social/position/18427"
+  },
+  {
+    "id": "job_fs_019",
+    "externalRecordId": "recvh1GUxSIItu",
+    "title": "产品负责人",
+    "company": "IGG",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "未知来源",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "单个方向的产品负责人，需要考虑商业化变现",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": ""
+  },
+  {
+    "id": "job_fs_020",
+    "externalRecordId": "recvh1GXpgggdu",
+    "title": "AI社交产品经理",
+    "company": "青藤之恋",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "未知来源",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责青藤之恋及AI红娘等AI社交产品的规划与设计，主导AI功能从0到1的探索与落地，对核心指标负责；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、2-5年互联⽹产品经验，有完整的AI产品设计和上线经验，能清晰复盘AI能⼒对业务指标的实际贡献；",
+      "2、对Prompt Engineering、RAG、Agent等大模型应用范式有清晰认知，有Agent产品设计或调优实操经验者优先；",
+      "3、具备AI效果评估意识，能定义评测指标、分析Bad Case、推动模型效果持续改进；",
+      "4、优秀的项⽬推动能力和跨部门沟通能力，能在高不确定性的AI探索项目中拿到结果。",
+      "1、有社交/dating产品经验，能用数据证明对增长或留存的明确贡献；",
+      "2、有海外产品经验，了解中东地区用户的文化差异与需求特点；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": ""
+  },
+  {
+    "id": "job_fs_021",
+    "externalRecordId": "recvh1GZtyiI7J",
+    "title": "资深C端 AI产品经理（语音/创作工具）",
+    "company": "Soul",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责 Soul App 移动端社交功能（如语音房、发布工具等）的规划与设计；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科以上学历，2年及以上互联网产品工作经验；",
+      "2、具备全局观，独立负责过社交、直播、语音房或创作工具类产品的全生命周期管理；",
+      "3、对 AI 行业有深度了解，熟悉主流大模型特点，有语音大模型、多模态落地经验者优先（重点）；",
+      "4、具有扎实的交互功底和较强的逻辑思维，能够将复杂的 AI 流程转化为简单易用的 C 端体验；",
+      "5、具备较强的数据分析能力，能通过数据驱动 AI 模型策略的调优与功能改进；",
+      "6、具有良好的协作能力，善于跨部门沟通协调，抗压能力强；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://soulapp.jobs.feishu.cn/index/position/7589121739021699370/detail"
+  },
+  {
+    "id": "job_fs_022",
+    "externalRecordId": "recvh1HuFCZ1Oj",
+    "title": "AI App C端产品经理",
+    "company": "kimi",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "负责 AI App 的 C 端产品规划与迭代，围绕核心用户场景持续优化体验与转化效率",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "5 年及以上的C 端产品经验，有 成熟 App 或 高频 C 端产品经验者优先",
+      "C 端 sense 强：对用户情绪、动机、使用场景敏感，能判断“好不好用”“想不想用”“愿不愿留下”",
+      "对 AI 产品有强烈兴趣，理解 AI 能力边界，不做“为了 AI 而 AI”的功能",
+      "能把复杂能力抽象成简单体验，对交互、文案、节奏有判断力",
+      "有良好的逻辑能力和表达能力，能清晰阐述产品取舍和设计理由",
+      "自驱力强，愿意快速试错、持续迭代"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/job_detail/c60ba325cae79e440nR_2t24F1pV.html?pk=cpc_job_index_beijing&ka=rcmd_list_job_1&lid=cf4d6a05-a414-44d7-9325-1d5caa5540b6.f1:common.eyJzZXNzaW9uSWQiOiI4YjM3MTNjNi1iNmRhLTRjNmEtYjE3Yi1mODVmZTE0ZjljOWQiLCJyY2RCelR5cGUiOiJmMV9ncmNkIn0.2&sessionId=8b3713c6-b6da-4c6a-b17b-f85fe14f9c9d"
+  },
+  {
+    "id": "job_fs_023",
+    "externalRecordId": "recvh1HE0ZxHkT",
+    "title": "社交产品经理",
+    "company": "陌陌",
+    "location": "未知",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "未知来源",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责陌陌社交聊天场景的核心体验与需求探索，帮助用户构建新的社交关系，提升平台粘性；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，计算机、心理学、经济学、社会学专业优先；",
+      "2、5年产品工作经验；",
+      "3、社交/社区产品的重度用户，对社交场景有深刻理解，爱玩会玩优先；",
+      "4、独立思考并善于表达学习和反思，自驱能力强"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": ""
+  },
+  {
+    "id": "job_fs_024",
+    "externalRecordId": "recvh1UFLI2HEq",
+    "title": "用户策略产品经理",
+    "company": "Soul",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责SOUL主站低活、新用户等群体承接，通过数据洞察挖掘关键问题，用策略、产品功能创新等手段，实现用户留存和时长增长；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、1-3年互联网产品经验，有用户增长承接相关经验；",
+      "2、对社交类产品有兴趣、爱研究；对行业和前沿产品感知力强；",
+      "3、有优秀的沟通能力和自驱力，深度思考能力和owner意识强；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://soulapp.jobs.feishu.cn/index/position/7550874000022210858/detail"
+  },
+  {
+    "id": "job_fs_025",
+    "externalRecordId": "recvh1VfwqYlGZ",
+    "title": "社交策略产品经理",
+    "company": "Soul",
+    "location": "未知",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责社交产品线的核心匹配方向，通过策略及产品手段推动匹配业务的持续优化，以带动社交平台匹配效率提升；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、2年以上互联网产品经验，至少一年的推荐策略相关的产品经验；",
+      "2、对社交类产品有兴趣、爱研究，并对社交产品有前瞻性思路和想法；",
+      "3、对数据的敏感度高，善于从数据中发现问题，具备独立分析数据的能力优先；",
+      "4、有优秀的沟通能力、跨部门协调能力有较强的组织能力和抗压能力。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://soulapp.jobs.feishu.cn/index/position/7310051927549839643/detail"
+  },
+  {
+    "id": "job_fs_026",
+    "externalRecordId": "recvh1WJPR8FgQ",
+    "title": "AI社交产品经理",
+    "company": "陌陌",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "未知来源",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责陌陌主端AI社交产品工作，提升用户整体在平台的社交体验;",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、能结合 AI 技术设计新颖互动玩法，打破传统社交产品边界",
+      "2、本科及以上学历，3年以上互联网产品经验，有社交经验优先;",
+      "3、数据敏感，具备优秀的数据分析、策略分析、逻辑分析的能力；",
+      "4、深刻理解产品成败的关键，能清晰定义问题、寻求多种解决方案;",
+      "5、重视产品设计细节，有追求、有审美；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": ""
+  },
+  {
+    "id": "job_fs_027",
+    "externalRecordId": "recvh1YJokMvjV",
+    "title": "AI社交产品经理",
+    "company": "测测",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1. 负责AI社交产品（含社交智能体、AI驱动的社交功能与互动场景）的整体规划与架构设计，制定产品短期目标与长期路线图。",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1. 全日制统招本科及以上学历，5年以上互联网产品经验，其中至少2年AI相关产品（如AI工具、智能体、社交或创作者平台）经验，具备从0到1主导复杂产品模块的成功实践。",
+      "2. 出色的AI技术理解与转化能力：熟悉大模型技术特点与应用边界，能够独立借助ai coding 工具设计落地agent 与玩法，并与技术团队高效协同落地。",
+      "3. 深厚的社交产品经验与用户洞察：深度理解社交场景、用户心理与增长机制，有社交产品或强互动社区产品经验者优先。",
+      "4. 系统的产品架构与规划能力：逻辑严谨，能独立完成社交智能体及AI功能的产品架构、闭环设计与路径规划。",
+      "5. 数据驱动与增长闭环经验：擅长通过数据分析和实验验证驱动产品迭代，具备从工具赋能到用户增长的实际操盘经验。",
+      "6. 强大的协作与项目推动力：目标导向，能有效协同运营、研发、设计等多团队，在复杂项目中推动目标达成。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/job_detail/c73c2612aa08b89b0nZ53du4F1ZX.html?pk=cpc_job_index_beijing&ka=rcmd_list_job_3&lid=fd82c65e-0e63-4ba7-a2e7-ce0486059f8b.f1:common.eyJzZXNzaW9uSWQiOiI4OGNjZDJhNC0wZjM2LTRlMjItOTRlNS1mMjkxNjU0NGYzNjQiLCJyY2RCelR5cGUiOiJmMV9ncmNkIn0.4&sessionId=88ccd2a4-0f36-4e22-94e5-f2916544f364"
+  },
+  {
+    "id": "job_fs_028",
+    "externalRecordId": "recvh20c7xBBoX",
+    "title": "夸克网盘相册产品经理",
+    "company": "阿里",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责夸克网盘相册核心功能（照片/视频智能整理、AI图像/视频工具），以⽤户价值为核⼼，对产品进⾏规划与策略设计，完成需求分析、市场分析、产品功能设计等，结合行业需求及市场发展趋势，进行创新性的探索；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，有 5 年以上互联网的产品经验；作为 Owner 负责过相册相机图片类产品/AI大模型产品设计经验者优先；",
+      "2、有产品sense，关注产品细节和设计品质，善于利用前沿技术落地为好用的产品；",
+      "3、对拍照、相册场景感兴趣，有想法，热衷研究时下最新玩法，有互动、社区化运营经验的优先；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/19b7e3949cb97add03F42Nw~.html"
+  },
+  {
+    "id": "job_fs_029",
+    "externalRecordId": "recvh212xFD1yS",
+    "title": "千问客户端产品经理",
+    "company": "阿里",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责千问客户端的整体体验设计与功能演进，从用户视角出发，持续优化核心使用路径与体验，提升千问C端产品力；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、3年以上C端产品经验，有完整的产品设计、迭代与决策经验，有 工具类/AI对话类经验者加分，有设计背景加分",
+      "2、对用户体验和细节有高度的追求，具备强烈的用户同理心与产品直觉，有明确的产品审美标准；",
+      "3、具备优秀的跨团队协作与项目推进能力，能坚持将想法执行落地，拿到结果；",
+      "4、具备竞争视角，了解业内主流AI产品特点，有深入思考并能提出个人见解。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/19b7e3949cb97add03F42Nw~.html?page=2"
+  },
+  {
+    "id": "job_fs_030",
+    "externalRecordId": "recvh213KWxuSz",
+    "title": "海外AI应用专家",
+    "company": "阿里",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1.负责海外AI工具的产品设计，包括和用户共创、价值发掘、产品架构、产品设计与面向市场的前端推广；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、有海外产品实战经验，有代表作品，良好的英语能力，英语4级以上；",
+      "2、本科及以上学历，5年以上AI应用产品经验，有To C AI功能（如智能助手、Copilot、Agent）出海欧美并上线的实际项目；",
+      "3、主导过至少1个AI功能从0到1在海外上线，并有可验证结果；",
+      "4、逻辑性、沟通能力、协作能力强；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://talent.quark.cn/off-campus/position-detail?lang=zh&positionId=100010920013&track_id=SSP1776411512701yazTMPPIQs2887"
+  },
+  {
+    "id": "job_fs_031",
+    "externalRecordId": "recvh213KWOpUW",
+    "title": "Chat推荐策略产品经理",
+    "company": "阿里",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1. 跟踪国内外竞品的Chat推荐模块与回复效果，分析优劣输出竞对方案",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1. 本科及以上学历，3年以上互联网行业产品工作经验，有C端推荐策略经验者优先",
+      "2. 对AI方向的发展趋势和应用有一定的理解，具备快速学习能力并可以打破固有惯性思维",
+      "3. 具备良好的数据分析能力、逻辑思维能力以及沟通协调能力",
+      "4. 责任心强，具备良好的执行力和抗压能力，具备自驱能力与结果导向思维"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://talent.quark.cn/off-campus/position-detail?lang=zh&positionId=100009920027&track_id=SSP1776411628035HiXqaoJtNu8454"
+  },
+  {
+    "id": "job_fs_032",
+    "externalRecordId": "recvh213KWqyyy",
+    "title": "AI产品经理",
+    "company": "快手",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、产品规划与设计：深入研究AI Agent、大模型应用等前沿技术，挖掘在企业工作场景中的落地机会；撰写清晰的PRD文档，定义产品需求、用户故事及验收标准；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，3年以上产品经理经验，有完整的产品从0到1经历；",
+      "2、具备价值判断力，能够将“用户需求”转化成“可被模型解决的问题”，设计AI产品能够真正创造增量价值；",
+      "3、优秀的逻辑思维能力，能够将复杂问题结构化拆解；具备AI产品设计能力，能设计人机协作流程；",
+      "4、具备拥抱AI的意识，日常产品工作中尽可能使用AI工具/能力为产品工作赋能；",
+      "5、加分项：",
+      "（1）熟悉AI数字员工以及有AI Coding领域经验；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://zhaopin.kuaishou.cn/#/official/social/job-info/29156"
+  },
+  {
+    "id": "job_fs_033",
+    "externalRecordId": "recvh213KWCSYj",
+    "title": "AI社交产品经理",
+    "company": "快手",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责回森社交方向的 AI 产品规划，探索 AI 在社交陪伴、互动增强、氛围营造等场景中的创新应用，拓展新型社交方式与产品体验；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，3年以上互联网产品经验，有内容、社交或AIGC方向经验优先；",
+      "2、对AI产品在用户互动、内容增强等场景的应用有理解，有相关产品落地经验者更佳；",
+      "3、熟悉大模型能力与Prompt设计，对 AI 产品从 0-1 落地或关键功能迭代有完整经验；",
+      "4、具备良好的用户洞察与数据分析能力，能从用户行为中抽象需求并推动有效优化。",
+      "1、有音乐、K歌或泛娱乐社区产品经验，理解创作者心理与内容消费逻辑；",
+      "2、有AI商业化或ROI优化经验，懂得平衡体验与成本；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://zhaopin.kuaishou.cn/#/official/social/job-info/29521"
+  },
+  {
+    "id": "job_fs_034",
+    "externalRecordId": "recvh213KW79nM",
+    "title": "AIGC内容产品经理",
+    "company": "值得买",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责AIGC内容产品的规划与落地，为最终内容效果负责；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，2年以上内容产品或AI相关产品经验；",
+      "2、对AIGC、大模型、提示词工程、上下文管理有深入理解，有实际落地经验者优先；",
+      "3、具备较强的内容sense，能判断什么是“好内容”，熟悉内容创作逻辑与用户偏好；",
+      "4、具备跨团队沟通协作能力，能与算法、工程、内容运营团队高效合作；",
+      "5、数据分析与实验能力强，能基于效果指标持续迭代产品；",
+      "6、对AI内容的未来充满好奇与想象力，具备创新驱动与理想主义精神。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/678e05c1e241413e0XB4.html"
+  },
+  {
+    "id": "job_fs_035",
+    "externalRecordId": "recvh213KW8PeG",
+    "title": "Agent产品经理",
+    "company": "阶跃星辰",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、与算法、数据、工程团队紧密协作，负责 Agent 相关产品规划、模型能力建设与版本迭代，推动模型及agent关键能力模块（⼯具调⽤、记忆/上下⽂、多智能体协作等）落地并持续优化；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，计算机、软件工程、人工智能等相关专业优先；",
+      "2、2年以上 AI 产品经验，至少1年 LLM / 多模态 / Agent 相关产品或评测经验，优秀的项目管理能力；",
+      "3、具备扎实的技术理解力，熟悉 LLM / 多模态/MCP/multi-agent / GUI Agent 的基本原理与业界进展，理解 agent 基本模块（工具调用、记忆/上下文等）；愿意持续阅读论文跟直接体验海内外产品，并将使用体验转化为评测与产品改进思路；",
+      "3、数据驱动意识与逻辑能力强，具备基础数据分析能力与指标体系搭建能力，能通过 badcase 洞察模型本质问题，并提出优化方案；",
+      "熟练运用 Prompt Engineering，能将业务流程抽象为模型可理解、可执行的指导性原则；",
+      "4、具备良好的客户沟通与跨团队协作能力，能深入理解需求并输出解决方案，具备强交付意识，适应快节奏工作方式；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/0591ce5cac2618c303N43dm0F1o~.html"
+  },
+  {
+    "id": "job_fs_036",
+    "externalRecordId": "recvh213KW5aPR",
+    "title": "AI影视工具产品经理",
+    "company": "阶跃星辰",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "核心功能体验优化：负责 AI影视工具的核心功能优化，包括但不限于从剧本解析、分镜生成、角⾊/场景⼀致性控制到最终视频合成的全链路",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "本科及以上学历，2 年以上互联网产品经理经验，至少 1 年 AIGC 相关产品经验。",
+      "有内容创作工具（编辑器、视频剪辑、漫画制作）或AI 图像/视频产品从 0 到 1 的经验者优先。",
+      "熟悉主流 AIGC 技术栈，具备基本的提示词工程能力，能独立调试生成效果。",
+      "业务敏锐度：",
+      "热爱 ACG（动画、漫画、游戏）文化，熟悉网文、漫剧、短剧等内容形态及用户偏好。",
+      "对美学有一定追求，具备良好的审美能力，能判断生成内容的优劣。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/0591ce5cac2618c303N43dm0F1o~.html?page=2&query=ai%20%E4%BA%A7%E5%93%81"
+  },
+  {
+    "id": "job_fs_037",
+    "externalRecordId": "recvh213KWPWsW",
+    "title": "aigc-星野产品经理",
+    "company": "minimax",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "我们正在寻找对大模型技术充满热情与好奇心的未来领袖。作为团队的核心成员，你将：",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、卓越的技术理解力，具备良好的数据结构和算法基础，熟练掌握Python/SQL等工具者优先；",
+      "2、出色的产品思维，对AI产品的交互设计、能力边界等问题有自己独到的思考；",
+      "3、极强的自驱力与好奇心，主动探索未知领域，乐于学习并能快速掌握新知识。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://vrfi1sk8a0.jobs.feishu.cn/index/position/7362070184364591387/detail"
+  },
+  {
+    "id": "job_fs_038",
+    "externalRecordId": "recvh213KWZCg7",
+    "title": "Agent产品经理",
+    "company": "minimax",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、参与Agent产品各环节规划，制定产品战略与路线图，与研发、设计、算法、市场等团队紧密协作，确保产品高效、高质量地迭代；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、 C端移动互联网1-3年经验，有AIGC、商业化、海外市场经验者更佳；",
+      "2、对AIGC领域（尤其是Agent）感兴趣，自己有过相关研究或实践项目，有自己的想法和认知；",
+      "3、 具备全局视野和良好的产品sense，富有同理心和责任心；",
+      "4、 自驱力和学习能力强，有良好的抗压能力，能够合理协调各团队资源共同完成目标。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://vrfi1sk8a0.jobs.feishu.cn/index/position/7520549080461887785/detail"
+  },
+  {
+    "id": "job_fs_039",
+    "externalRecordId": "recvh2cZATSKYG",
+    "title": "C端AI内容产品经理",
+    "company": "minimax",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "在线招聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责C端AI内容产品的规划和设计工作，结合业务场景及行业诉求孵化创新产品；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、对视频、图片AI算法了解，有内容产品经验优先；",
+      "2、对AIGC有热情，了解国内外行业动态 ；",
+      "3、高效项目推进能力，出色的沟通能力，有较强自驱力和团队合作精神 ；",
+      "4、思维活跃，有好奇心和责任心。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://vrfi1sk8a0.jobs.feishu.cn/index/position/7579523111286147366/detail"
+  },
+  {
+    "id": "job_fs_040",
+    "externalRecordId": "recvh2d0Ccovhd",
+    "title": "AI产品经理",
+    "company": "快手",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、参与公司大模型与AIGC相关的平台型和用户型项目，包括但不限于语言模型、图像生成、语音合成、视频生成等方向；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，计算机与人工智能或产品设计等相关专业优先；",
+      "2、有工具类产品经验，具备 C 端产品 sense；",
+      "3、优秀的逻辑分析和数据处理能力，善于从数据中提炼洞见；",
+      "4、良好的沟通协调能力，能够有效协调各部门资源，推动项目进展；",
+      "5、积极主动，富有创新精神，愿意在AIGC领域探索前沿的应用场景。",
+      "1、有创作工具或创作者社区相关经验；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/job_detail/ce19c338d6eb9b6303xz39y_EVpQ.html?pk=cpc_job_index_beijing&ka=new_list_job_7&lid=216bb496-fb6f-4480-b94b-e7105dbd1b9b.lat:common.eyJzZXNzaW9uSWQiOiJmNjc3MjVhNi04NzhjLTRlNTctODU0YS02MzAzOThiZjQ4NmUiLCJyY2RCelR5cGUiOiJsYXRfZ3JjZCJ9.8&sessionId=f67725a6-878c-4e57-854a-630398bf486e"
+  },
+  {
+    "id": "job_fs_041",
+    "externalRecordId": "recvh2d0CccUND",
+    "title": "社交产品经理",
+    "company": "牵手",
+    "location": "未知",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责美国项目dating app的用户体验的相关工作；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、英文流利，有在欧美生活/交换/留学经历，有To C产品经理的工作经历。",
+      "2、1~6年经验，有产品的全局视角 或 完整经历0-1产品闭环。",
+      "3、思维逻辑清晰，擅长拆解业务目标并给出解决方案，协作能力强。",
+      "4、具备好奇心，喜欢探索、喜欢解决难题，非经验主义。",
+      "5、dating app用户，或有社交产品工作经验/社交领域创业经历。",
+      "6、加分项：关注AI在产品侧的落地。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/ab8eb97d47e715431nx53dm9FVE~.html"
+  },
+  {
+    "id": "job_fs_042",
+    "externalRecordId": "recvh2d0CchIWE",
+    "title": "AI 产品经理",
+    "company": "她说",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1）全面负责面向未来的社交产品，负责「她说app」创新迭代；目前产品处在行业Top位置，希望通过AI Agent有关创新更进一步，创造创新性的体验和颠覆性的服务深度和交付效率。",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1） 统招重点或海外名校本科及以上学历，有突出的移动端toC产品业绩和一定的复杂AI Agent落地方法论和业绩，有成熟的产品专家工作方法论和快速落地复杂模式下的AI Agent的成功经验。",
+      "2） 对人有强烈好奇心，逻辑能力出众，富有创意和创造力；",
+      "3） 具备突出的领导力，优秀的沟通表达能力和团队沟通协调能力，有良好的审美；",
+      "4） 对C端不同行业业态的商业模式和用户理解有系统性思考，具备快速学习和敏捷迭代的能力；",
+      "5） 渴望与小而美精英团队共事，渴望与杰出人才共事创作出自己的产品代表作，在Agent时代做出颠覆性创新。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/57d2d596da7484dc1XRz3tu-Fw~~.html?ka=more-similar-jobs1"
+  },
+  {
+    "id": "job_fs_043",
+    "externalRecordId": "recvh2d0CcDbRh",
+    "title": "AI产品经理",
+    "company": "b612",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、深度体验和研究星野、猫箱、筑梦岛等头部AI智能体产品，拆解其在角色创建、对话交互、记忆系统、多模态能力等方面的产品设计逻辑，提炼可借鉴的能⼒模型与体验标准",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上，5年以上社交产品经验，至少1年AI/大模型相关成功经验；",
+      "2、熟悉大模型基本原理（RAG、Prompt工程等），能与算法高效沟通；",
+      "3、能独立输出PRD，熟练使用原型工具；",
+      "4、强项目推进能力，适应快节奏。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/4899e3a07a840ba81nFz29S5GA~~.html?ka=more-similar-jobs1"
+  },
+  {
+    "id": "job_fs_044",
+    "externalRecordId": "recvh2d0Ccl0yt",
+    "title": "社交产品经理",
+    "company": "b612",
+    "location": "未知",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1. 负责崽崽ZEPETO社交方向项目的产品规划、功能设计、用户体验设计",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1. 211、985本科及以上学历，3年以上互联网C端产品工作经验，社交方向经验加分",
+      "2. 对社交方向产品工作有浓厚兴趣，对泛娱乐社交有自己的独到见解。熟悉社交相关的产品设计和运营策略",
+      "3. 擅长数据分析，具备优秀的逻辑思维能力。善于发现问题，解决问题",
+      "4. 有强烈的owner意识、自驱力，抗压能力强，善于沟通，能够顺畅的跟跨国团队进行深入交流",
+      "5. 拥有国际化的思维和视野"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/4899e3a07a840ba81nFz29S5GA~~.html?ka=more-similar-jobs1"
+  },
+  {
+    "id": "job_fs_045",
+    "externalRecordId": "recvh2d0CckPYx",
+    "title": "AI ToC产品经理",
+    "company": "花房",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1.负责 AI ToC 产品的规划、管理与落地，把控产品方向，调优产品体验，推动产品顺利开发与上线；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1.本科及以上学历，有移动互联⽹ / AI C 端产品经验，拥有社区 / 社交、AI toC 类 0-1 孵化经验者优先，具有海外项目产品经验优先；",
+      "2.对用户⼼理和交互体验有洞察力，能够清晰、有效地与不同团队进行交流；",
+      "3.深入了解大模型原理，对其能力边界和未来发展趋势有独立、清晰的判断，能将 AI 技术与产品设计深度结合；",
+      "4.好奇心强，抗压能力佳，能在快速变化环境中持续学习创新。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/cc0c54eb249210911nx_2N-_FFI~.html?ka=more-similar-jobs1"
+  },
+  {
+    "id": "job_fs_046",
+    "externalRecordId": "recvh2d0Cc5zLk",
+    "title": "快手社交产品经理",
+    "company": "快手",
+    "location": "未知",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责快手社交相关的产品业务，包括但不限于即时通讯，创新玩法(如聊天宠物)，朋友页等社交业务，服务用户的社交体验；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，3年以上产品经验；",
+      "2、较强的逻辑思维能力和数据分析问题、解决问题的能力，善于归纳总结问题，注重过程和结果，关注细节，抗压能力强；",
+      "3、自我驱动力强，能够清楚描述问题、规划与愿景，有能力推动团队一同深入解决；",
+      "4、对社交产品方向有强烈的热情和深入的理解，善于发现用户痛点，判断优先级；",
+      "5、熟悉年轻用户的社交需求，各类IM及社区社交产品深度用户优先，有相关工作经验者优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/web/geek/jobs?query=%E7%A4%BE%E4%BA%A4%E4%BA%A7%E5%93%81%E7%BB%8F%E7%90%86&city=101010100&industry=&position="
+  },
+  {
+    "id": "job_fs_047",
+    "externalRecordId": "recvh2h0V0n8jm",
+    "title": "AI社交游戏平台产品经理",
+    "company": "米可世界",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1.负责 AI 社交游戏平台核心玩法与产品机制的规划、设计与迭代，聚焦 UGC 创作、多人互动、轻竞技与社交沉淀，打造具备增长潜力的平台型产品。",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1.3 年及以上产品经验，有游戏、社交、UGC 或多人互动平台相关背景优先；对强社交产品与平台型玩法有较深理解。",
+      "2.深度参与过至少一款强互动产品的核心模块设计，熟悉多人玩法、社交机制、UGC 工具、内容生态中的一个或多个方向。",
+      "3.理解用户互动动机、社交关系链及平台增长逻辑，能够独立完成产品分析、方案设计与跨团队推进。",
+      "4.具备较强的数据分析与结构化思考能力，能够从用户行为与业务指标中发现问题，并推动方案落地优化。",
+      "5.对 AI 在游戏和社交场景中的应用有较强兴趣和判断，能够结合业务需求设计具备落地性的产品方案。",
+      "1.有强社交游戏平台、多人派对玩法、轻竞技或 UGC 平台相关经验优先；"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/59282c4e8574491203F43Ng~.html?query=%E7%A4%BE%E4%BA%A4%E4%BA%A7%E5%93%81"
+  },
+  {
+    "id": "job_fs_048",
+    "externalRecordId": "recvh2LBK1F7hi",
+    "title": "社交推荐产品经理",
+    "company": "字节",
+    "location": "未知",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、策略执行与业务增长：负责抖音社交业务及独立端多闪业务推荐页、聊天室相关推荐策略的迭代，聚焦提升以关系建立、关系LT增长为导向的内容分发效率与用户匹配效率，利用策略手段撬动社交投稿和互动、内容到IM聊天的规模与质量提升；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、教育与经验：本科及以上学历，1年以上互联网产品/算法/分析经验，统计学/数学/计算机相关专业优先，熟悉社交或内容类产品优先；",
+      "2、核心能力：善于观察和总结，对数据敏感，有优秀的数据处理和分析能力，能够从数据中发现问题并提出解决方案；具备严密的逻辑思维能力；",
+      "3、沟通协作：出色沟通表达协作能力，重视细节，能够清晰表达策略思路，在跨团队协作中有效推进工作；",
+      "4、执行力：具有出色的目标拆分能力，能够保持高效的执行力。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/6843224290324007182/detail"
+  },
+  {
+    "id": "job_fs_049",
+    "externalRecordId": "recvh2MrBwFtfh",
+    "title": "社交用户产品经理（IM功能与体验）-抖音",
+    "company": "字节",
+    "location": "未知",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、能力建设：主导抖音及其独立端的消息会话、群聊、B2C消息模块的产品设计与迭代，优化用户路径、分析链路推荐、会话内轻互动等功能，提升功能的可用性和用户留存；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，1年以上互联网社区/社交类产品经验，熟悉即时通讯（IM）、社交产品设计逻辑者优先；",
+      "2、用户洞察：具备敏锐的C端用户洞察，能从用户行为数据中挖掘需求，推动产品功能向“高互动性”“高留存性”方向优化；",
+      "3、技术理解：IM底层技术逻辑（如消息传输、群聊架构），能与研发高效协作，具备数据敏感性，能通过业务数据验证策略效果并反哺产品迭代；",
+      "4、创新与执行：对社交玩法（如小游戏、开放世界、AI聊天）有热情，擅长系统思考与目标拆解，能推动复杂项目从0到1落地；",
+      "5、协作能力：具备优秀的沟通协调与抗压能力，能整合跨部门资源（如商业化、算法、运营），推动IM与多业务场景的协同增长；具备严密的逻辑思维与目标拆解能力，能系统化解决复杂问题。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7498287031295789319/detail"
+  },
+  {
+    "id": "job_fs_050",
+    "externalRecordId": "recvh2N8rFeXth",
+    "title": "AI产品经理-ArkClaw",
+    "company": "字节",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "字节官网",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、产品规划与迭代：负责ArkClaw产品的路线图规划，深度理解C端用户需求，平衡个人版的创新玩法与企业版的稳定性要求，输出清晰的产品迭代计划；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、2年以上To C或SaaS产品经理经验，有AI类产品、开发者工具、效率工具产品经验优先；",
+      "2、具备优秀的用户共情能力和交互设计敏感度，能够站在普通用户视角思考问题，重视产品体验细节，对用户交互和体验有极致追求；",
+      "3、良好的逻辑思维能力和跨团队沟通能力，能够高效协调各方资源，推动项目落地；",
+      "4、对AI技术、智能助手领域有浓厚兴趣，使用过多款AI产品并对产品逻辑有深入洞察；学习能力强，能够快速理解新技术和新趋势；",
+      "5、有UX设计相关经验者优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://jobs.bytedance.com/experienced/position/7615915798603827509/detail"
+  },
+  {
+    "id": "job_fs_051",
+    "externalRecordId": "recvh2OYb0z0iL",
+    "title": "AI社交产品经理-抖音",
+    "company": "字节",
+    "location": "未知",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责抖音私信、群聊场景的 AI 能力建设和应用逻辑落地，如基于 LLM 、diffusion 等能力，规划并落地如“上下⽂感知的智能回复”、“多模态情感化表达（AI表情/语⾳）”、“消息智能摘要”等功能，显著提升沟通效率与社交愉悦感；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、本科及以上学历，1年以上互联网产品经验，熟悉 AI 应用，能够针对AI应用场景拆解能力；",
+      "2、有数据敏感和判断力，基于业务数据挖掘业务洞察，并转换成产品迭代思路；",
+      "3、有技术理解能力，具备 Prompt Engineering 能力，能独立拆解业务需求转化为算法可理解的逻辑；",
+      "4、具备严密的逻辑思维能力，能系统地思考与解决问题，并对目标拆解和落地实施；",
+      "5、具备优秀的沟通能力、资源协调能力和抗压能力，能够把握各方需求及整合资源。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/f409f37f83a6135b0nV_2d25EA~~.html?page=3&query=AI%20%E4%BA%A7%E5%93%81"
+  },
+  {
+    "id": "job_fs_052",
+    "externalRecordId": "recvjtVTgHisJQ",
+    "title": "大模型产品经理",
+    "company": "kimi",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1.成本优化策略制定：负责制定和执行针对大模型产品的成本优化策略，分析现有产品的运行成本，识别潜在优化空间，提出具体优化建议和实施方案。",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/b7e64a5f2aebe0ee1HR42N65FVs~.html"
+  },
+  {
+    "id": "job_fs_053",
+    "externalRecordId": "recvjtXNjn2DVA",
+    "title": "AI创新产品孵化岗",
+    "company": "小米",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "基于小米的人车家生态和场景，孵化让用户感觉酷的、能解决用户实际问题的、或引领行业风向的AI创新产品（大语言、语音、多模态、Agent等各方向）",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "1、具备强动手能力，背景不限（产品、前后端、算法皆可），但必须有通过AI工具（如Cursor、Windsurf）写完整前后端产品Demo的实际经验，最好是独立开发者、或业余开发爱好者；",
+      "2、乐于折腾，具备好奇心和Ownership，有强烈的意愿亲手打造出一款有影响力的好产品；",
+      "3、对国内外最新的AI技术进展和新产品有深度理解和一手体验，重度AI产品使用者；",
+      "4、本科及以上学历、计算机或人工智能等相关专业，3年左右工作经验最佳。",
+      "加分项：有C端项目的创业经验或从0到1经验"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/c101010100/110000/6f1aa1d6b1d033ad33B43N0~.html"
+  },
+  {
+    "id": "job_fs_054",
+    "externalRecordId": "recvjtY71mrSio",
+    "title": "AI产品经理",
+    "company": "小米",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责AI产品的规划、设计与落地，结合业务场景提出创新性解决方案，推动产品高效迭代；",
+    "responsibilities": [
+      "负责AI产品的规划、设计与落地，结合业务场景提出创新性解决方案，推动产品高效迭代；",
+      "深入识别关键用户场景，主导从需求挖掘、原型设计到上线运营的全⽣命周期管理，严格把控产品体验；",
+      "协调技术、算法、⼯程、设计等跨职能团队，推进AI能⼒在实际场景中的集成与优化，保证产品功能高质量落地；",
+      "持续跟踪AI行业发展趋势，分析竞品动态，挖掘⽤户痛点并转化为产品机会。"
+    ],
+    "requirements": [],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/c101010100/110000/6f1aa1d6b1d033ad33B43N0~.html"
+  },
+  {
+    "id": "job_fs_055",
+    "externalRecordId": "recvjtZzZVThJ8",
+    "title": "C端对话式AI产品经理",
+    "company": "美团",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "负责C端对话式AI产品的落地，完成文本、音视频等多模态交互的策略设计、落地、迭代，提升用户体验；",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "2年+AI C端产品经验，有头部C端AI交互类产品（豆包/文小言/元宝/Kimi等）核心功能落地经验优先；",
+      "对用户和需求有较为成熟的认知，积极乐观且有韧性对产品有品味、有想法、有热情，对产品体验细心敏感；",
+      "能定义清楚对于模型效果的预期和标准，能够持续推动技术团队做好能力规划和方向把控；",
+      "至少在某一个领域如Agent、社区、社交、创作工具等，对用户和需求有较为成熟的认知；",
+      "有深度思考和自我迭代的习惯，能够积极主动发现问题和解决问题。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/c101010100/110000/b633a34f787d94f21nZ_0929E1I~.html?page=3"
+  },
+  {
+    "id": "job_fs_056",
+    "externalRecordId": "recvju12e4PQlt",
+    "title": "海外产品经理",
+    "company": "高德地图",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "未知来源",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责共享出行海外业务的产品规划/设计/落地工作，明确业务目标和达成路径，推进落地并完成目标；",
+    "responsibilities": [
+      "负责共享出行海外业务的产品规划/设计/落地工作，明确业务目标和达成路径，推进落地并完成目标；",
+      "深⼊洞悉海外市场特性、⽤户需求和⽤户模型。探寻行业解决方案与商业化路径，与商务/运营紧密配合，促进业务规模增长；",
+      "负责项⽬推进过程中的跨部门沟通，协调各项资源满足业务增长诉求；",
+      "、基于用户反馈和业务数据，提出产品优化迭代方向以及把握节奏；"
+    ],
+    "requirements": [
+      "1、2年或以上互联网海外产品经验，产品基本功扎实，有独立负责或重度参与完整需求、价值发现及项目拆解、落地迭代过程；",
+      "2、要有非常积极的解决问题、和创造价值的心态，自驱力强大，且善于反思和自我迭代；",
+      "要能够站在用户、市场、业务环环境、竞争环境等不同视角权衡和深入思考当下最优解；",
+      "3、执行力和推动力强，抗压能力强；",
+      "4、善于沟通、英文可作为工作语言优先；",
+      "5、有海外产品，运营经验者优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": ""
+  },
+  {
+    "id": "job_fs_057",
+    "externalRecordId": "recvju2tLCYp2F",
+    "title": "AI智能客服与营销产品经理",
+    "company": "快手",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、场景定义与重构：深入理解生活服务“商家服务用户”的全链路场景（重点是售前咨询、营销转化），基于大模型能⼒重构商家与⽤户的对话交互模式，打造AI Native的智能客服与营销助⼿；",
+    "responsibilities": [
+      "场景定义与重构：深入理解生活服务“商家服务用户”的全链路场景（重点是售前咨询、营销转化），基于大模型能⼒重构商家与⽤户的对话交互模式，打造AI Native的智能客服与营销助⼿；",
+      "大模型对话策略：负责对话机器人的核⼼策略设计。包括但不限于多Agent协同、Prompt Engineering、RAG（检索增强生成）知识库构建等的优化，确保机器人回答的准确性、拟人化和情感化；",
+      "商业化闭环设计：探索AI在对话中的商业价值，设计“对话即服务/交易”的链路。通过AI主动引导、商品推荐、优惠发放等策略，在服务过程中提升转化率（GMV）；",
+      "商家提效工具：为商家提供低门槛的AI配置后台（Agent配置、知识库管理），让不同行业的商家能轻松训练自己的“金牌导购AI”；",
+      "效果评估与迭代：建立涵盖准确率、覆盖率、用户满意度（CSAT）及商业转化率的立体评估体系，基于Badcase分析持续驱动模型与产品的迭代。"
+    ],
+    "requirements": [
+      "1、计算机、AI等相关专业背景优先，了解NLP、深度学习等AI技术框架和算法原理；",
+      "2、2~3年以上互联网产品经理工作经验、1年以上AI产品或视频类产品相关从业经验；",
+      "3、较强的市场分析和产品规划能力；",
+      "4、具备良好的团队协作和项目管理能力者优先；",
+      "5、有大语言模型等前沿技术产品落地经验者优先、有商业化AI产品落地经验优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/c101010100/110000/480261c022ea03d81nV53tQ~.html"
+  },
+  {
+    "id": "job_fs_058",
+    "externalRecordId": "recvju2D2mVGWg",
+    "title": "AI社交产品经理",
+    "company": "快手",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责回森社交方向的 AI 产品规划，探索 AI 在社交陪伴、互动增强、氛围营造等场景中的创新应用，拓展新型社交方式与产品体验；",
+    "responsibilities": [
+      "负责回森社交方向的 AI 产品规划，探索 AI 在社交陪伴、互动增强、氛围营造等场景中的创新应用，拓展新型社交方式与产品体验；",
+      "基于用户洞察与业务⽬标，完成从需求定义、⽅案设计到效果验证的全流程，推动AI功能从0到1建设及持续迭代；",
+      "组织和协同算法、研发、设计等团队，⾼效推动大模型相关能力在 C 端场景落地，并把控项⽬节奏、体验质量与交付结果；",
+      "持续监测产品数据与用户反馈，推动交互策略与模型输出的迭代优化，对产品活跃度、留存与整体业务效果负责。"
+    ],
+    "requirements": [
+      "1、本科及以上学历，3年以上互联网产品经验，有内容、社交或AIGC方向经验优先；",
+      "2、对AI产品在用户互动、内容增强等场景的应用有理解，有相关产品落地经验者更佳；",
+      "3、熟悉大模型能力与Prompt设计，对 AI 产品从 0-1 落地或关键功能迭代有完整经验；",
+      "4、具备良好的用户洞察与数据分析能力，能从用户行为中抽象需求并推动有效优化。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/job_detail/121f7c1e7e1cab390nZ42tq1F1RQ.html"
+  },
+  {
+    "id": "job_fs_059",
+    "externalRecordId": "recvju5PkzlCPi",
+    "title": "海外社交产品策略负责人",
+    "company": "米可世界",
+    "location": "未知",
+    "salary": "面议",
+    "business": "社交",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责Sugo及其他海外社交产品的策略迭代工作，与算法、数据分析强协同，洞察流量分配的潜在机会并对最终的业绩结果负责。",
+    "responsibilities": [
+      "负责Sugo及其他海外社交产品的策略迭代工作，与算法、数据分析强协同，洞察流量分配的潜在机会并对最终的业绩结果负责。",
+      "关注海外竞品及大盘分发情况，深度下探供需两端的策略匹配现状，精细化产品运营能力，提升流量效率并指向大盘的社交收益。",
+      "聚焦⽤户的粘性与深度转化，将AI能⼒与⼯具在社交场景中有效落地，从0-1探索完成社交+AI的创新玩法。",
+      "负责方案推进过程中的跨部门协调沟通，协调各方资源并推动相关团队⾼效完成目标。"
+    ],
+    "requirements": [
+      "1、本科及以上学历，5年以上互联网产品经验，对用户流量/付费/社交增长模型有独特见解及方法论。",
+      "2、深耕策略与AI方向，对于社交匹配、流量效率、双边场景、用户onboarding等细分业务有成熟经验，并可快速复制运用拿到收益。",
+      "3、有较好的AI产品视野及探索欲，以目标为导向，推进执行力强。有策略融合AI相关产品经验者优先。",
+      "4、了解社交生态和付费模式，国内外社交产品重度使用者优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/web/geek/jobs?query=%E7%B1%B3%E5%8F%AF%E4%B8%96%E7%95%8C&city=101010100&industry=&position="
+  },
+  {
+    "id": "job_fs_060",
+    "externalRecordId": "recvju7r1TRtsj",
+    "title": "AI产品经理",
+    "company": "优酷",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责AI产品整体规划&设计，洞察行业机会，跟踪和分析 用户反馈，持续提升产品的用户体验",
+    "responsibilities": [
+      "负责AI产品整体规划&设计，洞察行业机会，跟踪和分析 用户反馈，持续提升产品的用户体验",
+      "能够抽象 C端用户场景和需求，并将⽤户需求转化为产品规划、设计或解决⽅案，持续提升产 品竞争⼒",
+      "负责多模态（生图、生视频等）等平台型产品Agent建设及⾃有模型建设",
+      "深入理解前端业务在图形生成、视频生成、创意制作等领域的场景和需求，通过对前端需求的洞察，抽象提炼对基础模型的要求，牵引模型持续进行基础能力的迭代、优化"
+    ],
+    "requirements": [
+      "1、有1年及以上AIGC行业相关产品及AI原生产品建设经验，主导过从0到1的建设阶段的优先，具备敏锐的业务及商业洞察力和产品思维",
+      "2、有AIGC图形、视频类产品经验者优先，有设计类创作经验、自媒体创作经验者优先",
+      "3、对AIGC、大语言模型、生图生视频等技术有浓厚热情"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/c101010100/110000/5d627415a46b4a750nJ9.html"
+  },
+  {
+    "id": "job_fs_061",
+    "externalRecordId": "recvju7ESOrAit",
+    "title": "AI产品经理",
+    "company": "阿里巴巴",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "阿里ATH事业群-AI创新事业部-未来生活实验室",
+    "responsibilities": [
+      "定义未来交互： 探索超越“聊天框”的下一代AI交互范式。无论是多模态的即时创作、对话式的复杂任务流，还是人与AI的共谋式探索，你将把前沿AI能力转化为用户本能般的自然操作。",
+      "领导“模型+产品”的双重迭代： 你不仅是产品的主人，也将深度参与模型调优与评估的闭环。通过分析用户与AI的互动数据，你将与算法团队一起，让产品体验和AI心智共同进化。",
+      "从0到1的“造梦”与规模化增长： 主导产品从构想、原型验证到爆发式增长的全过程。你需具备强大的数据嗅觉，能通过精细的实验和洞察，找到PMF的引爆点，并驱动产品跨越增长鸿沟。",
+      "构建AI原生的产品文化与流程： 与我们一同建立一套适应AI快速迭代的产品方法论。如何在周级别的模型迭代下保持产品领先？如何衡量AI带来的“体验价值”而非仅仅是功能指标？这些都是你需要回答的问题。"
+    ],
+    "requirements": [
+      "我们期待的你：",
+      "● 一个“AI原住民”： 你对市场上相关AI产品了如指掌，并经常为为它们的“潜力”而兴奋难眠。你是自身领域里最挑剔的AI用户。",
+      "● 一个原型思维者： 你善于用最快速的方式构建可交互的想法原型，坚信“Demo是新的PRD”。",
+      "● 一个数据与洞察的混音师： 你既能深入数据，从AB测试和用户会话中挖掘出黄金，又能跳出数据，通过与用户的共情获得超越数据的深刻洞察。",
+      "● 一个坚定的“体验派”： 你坚信在AI时代，极致的用户体验是唯一的护城河。你会为了降低用户10毫秒的等待时间，或为了一个更拟人化的反馈语调而据理力争。",
+      "● 一个跨领域翻译官： 你能在用户需求、技术可行性和商业价值三者之间无缝切换，是工程师、设计师和用户之间最可靠的桥梁。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/c101010100/110000/5d627415a46b4a750nJ9.html"
+  },
+  {
+    "id": "job_fs_062",
+    "externalRecordId": "recvju81r7cVUP",
+    "title": "数字人平台产品经理",
+    "company": "阿里巴巴",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1. 负责数字人平台产品规划与版本路线图，沉淀平台能力分层与模块边界（形象资产/生成与驱动/编辑与发布等）；",
+    "responsibilities": [
+      "负责数字人平台产品规划与版本路线图，沉淀平台能力分层与模块边界（形象资产/生成与驱动/编辑与发布等）；",
+      "面向业务场景做需求分析与指标定义，输出PRD、原型与验收标准，对交付结果负责；",
+      "熟练使⽤AIGC⼯具（⽣图/生视频）进行效果探索与⽅案验证，沉淀Prompt/参数/素材的可复用资产库与工作流程；",
+      "设计并推动Agent/工作流的产品化落地（工具调用、自动化流程编排、可观测与可评估），提升内容生产效率与稳定性；",
+      "推动算法、音视频工程、平台研发等多团队协作：里程碑、依赖与风险管理，保障上线质量（灰度、监控、回滚）；"
+    ],
+    "requirements": [
+      "1. 本科及以上学历，1年以上平台产品/AI产品/工具类产品经验，有0-1或平台化建设经验优先；",
+      "2. 熟练使用生图、生视频类AIGC工具进行原型与效果对齐；理解一致性、可控性、稳定性、成本/时延等关键取舍；",
+      "3. 了解Agent基本范式与落地要点（RAG、工具调用、工作流编排、评测/观测），有实践经验优先；",
+      "4. 具备优秀的跨团队推动与项目管理能力，能在高不确定性研发环境中推进交付；",
+      "5. 具备数据化思维，能建立并跟踪核心指标与评测方法，持续优化效果与效率；",
+      "6. 有数字人/视频生成/音视频链路或内容生产平台经验，或具备合规/版权机制落地经验者优先。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/c101010100/110000/5d627415a46b4a750nJ9.html"
+  },
+  {
+    "id": "job_fs_063",
+    "externalRecordId": "recvju8kEqovOC",
+    "title": "AI短剧漫剧工具产品经理",
+    "company": "掌阅",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1.AI短剧/漫剧工具整体规划：结合海外漫剧市场需求、内容生产痛点与公司战略，主导AI短剧/漫剧生产工具的产品定位、功能架构与迭代路线图，负责⼯具全⽣命周期管理，涵盖需求调研、PRD撰写、原型设计、研发跟进、上线验收全流程。",
+    "responsibilities": [
+      "AI短剧/漫剧工具整体规划：结合海外漫剧市场需求、内容生产痛点与公司战略，主导AI短剧/漫剧生产工具的产品定位、功能架构与迭代路线图，负责⼯具全⽣命周期管理，涵盖需求调研、PRD撰写、原型设计、研发跟进、上线验收全流程。",
+      "核⼼AI功能落地：聚焦文生漫/视频、Al分镜、Al配⾳、自动字幕、剧情生成、画面优化等核心AI能力，拆解产品需求，联动算法、研发、设计团队推进功能研发与调试，保障AI生成内容的画质、剧情流畅度与出海合规性。",
+      "内容生产链路优化：对接内部内容团队、海外创作者，深挖漫剧生产流程痛点，优化工具操作体验、生产效率与内容质量，搭建标准化AI漫剧生产闭环，降低内容制作成本、缩短产出周期。",
+      "数据驱动迭代优化：搭建AI工具数据监控体系，跟踪工具使用率、生成效率、内容合格率、用户满意度等核心指标，通过数据分析定位问题,持续迭代功能、优化AI模型效果，提升工具实用性与产能。",
+      "跨团队协同推进：统筹算法、研发、UI/UX、内容、运营、海外合规等跨团队资源，制定项目排期与推进计划，协调解决研发落地难题，保障工具按时上线、稳定运行；",
+      "合规与风控把控：贴合海外内容合规、数据合规要求(GDPR、CCPA等)，设计AI内容审核、版权风控机制，规避AI生成内容的侵权、违规风险,适配全球多区域运营标准。"
+    ],
+    "requirements": [
+      "1.本科及以上学历，3年以上AI工具/内容创作工具产品经验，主导过AI文生图、AI视频、漫剧/短剧创作工具从0到1落地，有成熟的产品交付案例；熟悉AIGC技术原理与产品落地逻辑者优先。",
+      "2.了解海外短剧、漫剧市场生态，熟悉内容生产全流程与行业痛点；对AI生成内容、动漫短剧创作有深刻理解，关注海外AIGC工具竞品动态与技术趋势。",
+      "3.具备扎实的产品设计功底，能独立输出完整需求文档、产品原型，擅长复杂功能拆解与流程优化；逻辑思维清晰，具备良好的用户思维，注重工具易用性与生产效率。",
+      "4.具备优秀的跨团队沟通、项目统筹能力，能高效联动技术、内容团队推进项目；抗压性强，适配高速送代的创业节奏，有出海产品工具经验者优先。",
+      "5.能调研海外用户需求：有AI文生视频、Al配音、内容中台产品经验；熟悉短剧/漫剧版权规则、海外内容审核标准。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/0ed7168c0705429b1nZ-3g~~.html"
+  },
+  {
+    "id": "job_fs_064",
+    "externalRecordId": "recvkx3S23LoEO",
+    "title": "AI agent",
+    "company": "minimax",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1. 负责 MiniMax Agent 相关产品的规划、设计和迭代；",
+    "responsibilities": [
+      "负责 MiniMax Agent 相关产品的规划、设计和迭代；",
+      "深入理解用户需求，设计 Agent 场景、交互流程、功能机制和产品体验；",
+      "与研发、算法、设计、运营团队协作，推动产品高质量落地；",
+      "建⽴产品效果评估⽅式，通过数据、⽤户反馈和 Badcase 持续优化产品。"
+    ],
+    "requirements": [],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/job_detail/35882f9d4ecb33240ndz2Ni7GFdZ.html?securityId=LQgHnAmByoEWx-_1-y1zI7DOn_oUnkT-qc94eyuM7qbs8uWkJhrUFsMLcMupq-Y2Enx7iE_wuzq8ZvRP-fTA6Z4tlbGCMb8J9UxBvOnGh9E5k72SyUG73KF-gJgVWDr9GjwpVwaRFD60m4xMBFcrSyHdpDZsCla2tq9WTClgmLiUe_0OVWjt0K9bLy65qBNap_r6ob6p1LwcNnlL_IioQC9peIWkkww_u7Mio5gLDTSZEkubI_x68zxm-hDNEkL2AMNlH0-HJJcdgXHb79mYIg5UxZ5Z8NdmRzNMik5OXEjMMHROaEnyl6Urg85iV9NaBOPD7dtLzPGyNNCcGRtkEbrhEiCCUt_s33-mzShexkX3sHWNqObFSmmHtftXorIqghn3Rg0wprq4IqfKFeRlHALYUQe23Uge&ka=company_more_job_35882f9d4ecb33240ndz2Ni7GFdZ"
+  },
+  {
+    "id": "job_fs_065",
+    "externalRecordId": "recvkx4FhKR24M",
+    "title": "AI产品经理",
+    "company": "taptap",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "负责用 AI 驱动产品创新与效率升级，主导产品从想法到上线，并推动团队工作方式持续进化。",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [
+      "- 计算机科学与技术或相关专业，0-5 年工作经验。",
+      "- Claude Code、Cursor、Codex 等⼯具中重度使用者。",
+      "- 具备基础工程能力（可依赖 AI），懂技术边界、可与研发高效协作。",
+      "- 对游戏/广告/商业化有一定的认知，执行力强。",
+      "- 有 0-1 的项目经验。",
+      "- 有 AI 工作流搭建或自动化实践经验。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/job_detail/7ed6d7ad615369310nV93Ny5GFZS.html?securityId=2yo3MMiBl5z0c-21ZdwyGFyXCGk5mA_L44fYI5N9Z5ad_kULTU52zk2_vkO0JxIAStovUbilYrilUBGeNa09BUOyc7apnXxS9c5PLiC-WJEj9GSw_f5rJAJCtQ0HapyGEkN0hM4rlSOuaRb24-0rzbF9WQMrPWraBA591xPYEnfFQAVIxkueH7UwA5sZV9YcmtlnkVP-NGWRY5ZOjXw8GgVio0fBL_Im4TBZlEjR_cBU66RaQRaed68wgiKmn6y42a6vt2I0p5ycD_4xtiJG2cS4QAWeuwveFvkIT24FEjckWDsbgGC_jv9PfpIj8EkozcEKndK1M1Zxor0mc05T7UtrCYWDzCN8tsWpIn8KV6o4VxthUNPVOQmxInuyx8HYF7KPvWewmWZ4pKg7eYFAFEQ_Soue6A~~&ka=company_more_job_7ed6d7ad615369310nV93Ny5GFZS"
+  },
+  {
+    "id": "job_fs_066",
+    "externalRecordId": "recvkx5jp3hrRX",
+    "title": "游戏AI助手产品经理",
+    "company": "taptap",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "▎ 描述一个你用 AI 工具（Claude Code、Codex 或类似工具）参与的项⽬，你具体做了什么，⼯具帮你解决了什么问题。链接、截图、说明均可。",
+    "responsibilities": [
+      "详见岗位描述"
+    ],
+    "requirements": [],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/2ddb78bea9d370b81HB93tW9.html?ka=more-similar-jobs1"
+  },
+  {
+    "id": "job_fs_067",
+    "externalRecordId": "recvkx6C29NlTI",
+    "title": "AI应用产品经理",
+    "company": "米哈游",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责AI 应用的产品规划、设计与落地（效率工具、智能助手、自动化流程等）；",
+    "responsibilities": [
+      "负责AI 应用的产品规划、设计与落地（效率工具、智能助手、自动化流程等）；",
+      "深⼊理解团队（产品 / 运营 / 研发 / 数据等）的真实⼯作场景，把 AI 嵌⼊到日常工作流中；",
+      "将零散的 AI 使⽤方式，产品化、系统化，沉淀为可复制的内部能力，提升个人和组织的产出；",
+      "影响和带动团队更高质量地使用 AI。"
+    ],
+    "requirements": [
+      "1、有很强的自驱力和学习能力，在自己的工作中高频、深度使用 AI；",
+      "2、具备产品思维，能把“一个好用的 Prompt / Workflow”升级为“一个可用的产品”。",
+      "3、效率工具、AI应用相关产品经验加分。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/gongsi/job/110000/9f8c95b92321a8e11nJz2Nu7.html"
+  },
+  {
+    "id": "job_fs_068",
+    "externalRecordId": "recvkxcv2A6Ds0",
+    "title": "AI社交产品经理",
+    "company": "作业帮",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1、负责AI社交产品的设计与落地，包括AI链路设计、prompt工程优化、用户交互体验设计等核心功能模块；",
+    "responsibilities": [
+      "负责AI社交产品的设计与落地，包括AI链路设计、prompt工程优化、用户交互体验设计等核心功能模块；",
+      "基于用户⾏为和反馈，设计并优化AI产品流程，持续提升⽤户体验和产品效果；",
+      "输出⾼质量的产品需求文档，跟进算法、开发、测试团队协作，对产品上线质量和用户体验负责；",
+      "建⽴数据指标体系，通过数据分析驱动产品迭代优化；",
+      "关注AI技术前沿动态和C端产品趋势，探索AI能力的创新应用场景。"
+    ],
+    "requirements": [
+      "1、本科或以上学历，3年及以上C端产品设计经验；",
+      "2、熟悉LLM应用和prompt工程",
+      "3、具备较强创新意识，和优秀的用户洞察能力和同理心"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/job_detail/9d62ee84773e89bb0nV_0ti9GVZS.html?securityId=-7L1_ELd2GzoA-F1oD-ZWniN09QC1UkxVQLGwiMfxXGfGnW-_trF5qCaA4eQ3h7IMJINPQ4hsWLdn6WmpvNaZAQCXGhsCsbGvbwkjygWjmnXLN7_ikzLxRqPUIeKjPZWeeLFQm67fEPAC1FeDqIzmCOqczBEI1IR9Kql6qxO4eEwGkyqU2SfittZtYsm6sUg2IaLyBN-OnuGUvNTWRYSstYnZd-ODUl2AFrEvYc_6N8zhJYV7rmDa5EXuYGN9x85gK3Xsp7vg7k6zqGg_4TndCur5I7WiArcIUr143ujjUl4Qa1J2Qt4aVSsqyw2XnqRP_C9O16RAFHWnsqFmlxplULOjA9euw_ooC6VvDw4kYcvrynNhIrtrZ9xKEx5FSA2mFgt7yXCC4mtzrDNL0HiTc6k6IjHIg~~&ka=company_more_job_9d62ee84773e89bb0nV_0ti9GVZS"
+  },
+  {
+    "id": "job_fs_069",
+    "externalRecordId": "recvkxcTrTpZ9A",
+    "title": "产品经理",
+    "company": "小红书",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1. 负责发布场景的功能规划与迭代，深入理解创作者发布链路中的核心痛点，推动产品需求高质量落地；",
+    "responsibilities": [
+      "负责发布场景的功能规划与迭代，深入理解创作者发布链路中的核心痛点，推动产品需求高质量落地；",
+      "主导 AI 发布容器打造，探索 AI 能⼒在发布场景的深度融合，重新定义创作者的发布体验与效率；",
+      "推进 AI 修图（AI P图）、AIGC 内容⽣成等 AI 能⼒在发布链路中的落地，挖掘 AI 工具对创作者供给效率的提升空间；",
+      "与算法、运营等团队深度协作，从用户需求与供给效率两个维度持续挖掘优化空间，为推荐策略提供产品侧⽀撑；",
+      "对发布工具和策略的用户满意度及活跃规模负责，以数据驱动决策，持续提升发布效率与体验质量。"
+    ],
+    "requirements": [
+      "1. 3-5年左右用户产品或工具产品经验，有用户互动、内容消费或社交场景产品经验者优先；",
+      "2. 用户需求洞察敏锐，逻辑严谨，具备较强的数据分析能力和快速学习能力；",
+      "3. 执行力强，高度自驱，具备良好的跨团队协作意识和成熟的项目推进能力，能够适应高强度工作节奏。",
+      "base北京、上海均可"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/job_detail/3e7010e85c0c0d9d0nB40t-1GVNS.html?pk=cpc_job_index_beijing&ka=rcmd_list_job_5&lid=f1811334-7b74-4548-ba6d-13d100cbe596.f1:common.eyJzZXNzaW9uSWQiOiI4NTk1NTFiYi04NjE4LTQwNzktYjQ1Yi1kZTkxZjFhN2I5ZmUiLCJyY2RCelR5cGUiOiJmMV9ncmNkIn0.6&sessionId=859551bb-8618-4079-b45b-de91f1a7b9fe"
+  },
+  {
+    "id": "job_fs_070",
+    "externalRecordId": "recvkxjr1n94UU",
+    "title": "智能服务产品经理",
+    "company": "拼多多",
+    "location": "未知",
+    "salary": "面议",
+    "business": "AI",
+    "industry": "互联网",
+    "experience": "不限",
+    "education": "本科",
+    "source": "BOSS直聘",
+    "collectedAt": "2026-06-08",
+    "status": "not_evaluated",
+    "nextActionAt": "",
+    "summary": "1. 负责智能聊天机器人、智能服务工作台等智能化产品的规划和落地，推动Agent在真实消费者场景中持续迭代",
+    "responsibilities": [
+      "负责智能聊天机器人、智能服务工作台等智能化产品的规划和落地，推动Agent在真实消费者场景中持续迭代",
+      "面向消费者体验问题，通过机器人解决、机器⼈辅助⼈⼯解决等形式，革新解决能力",
+      "⾯向商家服务场景，通过机器人解决、机器人辅助商家等形式，提升商家售前售后解决能力",
+      "联合业务、算法、工程团队一起优化端到端的智能服务体验，对用户满意度负责"
+    ],
+    "requirements": [
+      "1. 1年以上互联网产品经验，电商/服务/B端方向皆可，不要求大模型背景。",
+      "2. 逻辑清楚，数据敏感。有独立拆解复杂问题的能力。",
+      "3. 具备高度的责任心和较强的自我驱动力、抗压能力，善于合作，善于协调和调度资源推动业务发展。"
+    ],
+    "benefits": [],
+    "address": "",
+    "sourceUrl": "https://www.zhipin.com/job_detail/0ed409ef3b2e75c80nd-0tS8EFRS.html?ka=company_more_job_0ed409ef3b2e75c80nd-0tS8EFRS"
+  }
+];
+
+function jobStatusLabel(value) {
+  const option = JOB_STATUS_OPTIONS.find((item) => item.value === value);
+  return option ? option.label : "待评估";
+}
+
+function statusTone(value) {
+  if (value === "offer") return "success";
+  if (value === "rejected" || value === "withdrawn") return "muted";
+  if (value.indexOf("interview") === 0) return "warning";
+  if (value === "applied" || value === "screening") return "info";
+  return "neutral";
+}
+
+function JobPill({ children, tone = "neutral" }) {
+  return <span className={`job-pill tone-${tone}`}>{children}</span>;
+}
+
+function MatchScore({ score, compact = false }) {
+  if (score == null) {
+    return <span className="job-score-empty">待分析</span>;
+  }
+  return (
+    <span className={`job-score ${compact ? "is-compact" : ""}`}>
+      <strong>{score}</strong><small>%</small>
+    </span>
+  );
+}
+
+function JobListCard({ job, selected, analysis, analysisOutdated, onSelect, onAnalyze, onRewrite, onStatusChange }) {
+  return (
+    <article className={`job-card ${selected ? "is-selected" : ""}`} onClick={onSelect}>
+      <div className="job-card-main">
+        <div className="job-card-heading">
+          <div className="job-card-title-wrap">
+            <h3>{job.title}</h3>
+            <div className="job-company"><Icon name="Building2" size={13} /> {job.company}</div>
+          </div>
+          <div className="job-card-side">
+            <div className="job-salary">{job.salary}</div>
+            <div>
+              <MatchScore score={analysis && analysis.score} compact />
+              {analysisOutdated && <span className="job-analysis-outdated">需更新</span>}
+            </div>
+          </div>
+        </div>
+        <div className="job-meta-row">
+          <span><Icon name="MapPin" size={13} />{job.location}</span>
+          <span><Icon name="BriefcaseBusiness" size={13} />{job.experience}</span>
+          <span><Icon name="GraduationCap" size={13} />{job.education}</span>
+          <JobPill>{job.business}</JobPill>
+        </div>
+        <div className="job-card-footer">
+          <div className="job-source">
+            <Icon name="Database" size={13} />
+            {job.source} · 收集于 {job.collectedAt.slice(5).replace("-", "/")}
+          </div>
+          <div className="job-card-actions" onClick={(event) => event.stopPropagation()}>
+            <button className="job-secondary-button" onClick={onAnalyze}>
+              <Icon name="ChartNoAxesCombined" size={14} /> 匹配分析
+            </button>
+            <button className="job-primary-button" onClick={onRewrite}>
+              <Icon name="Sparkles" size={14} /> 简历改写
+            </button>
+          </div>
+        </div>
+      </div>
+    </article>
+  );
+}
+
+function JobsHeader({ visibleCount, totalCount, lastSyncedAt, onRefresh }) {
+  const [refreshing, setRefreshing] = React.useState(false);
+  const refresh = () => {
+    setRefreshing(true);
+    setTimeout(() => {
+      setRefreshing(false);
+      onRefresh();
+    }, 700);
+  };
+  return (
+    <header className="jobs-header">
+      <div>
+        <div className="jobs-eyebrow">FEISHU JOB PIPELINE</div>
+        <div className="jobs-title-line">
+          <h1>职位推荐</h1>
+          <span>{visibleCount} / {totalCount} 个职位</span>
+        </div>
+        <p>管理已收集职位，记录求职进度，并结合当前简历进行针对性分析。</p>
+      </div>
+      <button className="job-refresh-button" onClick={refresh} disabled={refreshing}>
+        <Icon name={refreshing ? "LoaderCircle" : "RefreshCw"} size={15} className={refreshing ? "animate-spin" : ""} />
+        {refreshing ? "同步中…" : "刷新职位"}
+        <small>{lastSyncedAt}</small>
+      </button>
+    </header>
+  );
+}
+
+function JobFilters({ search, setSearch, business, setBusiness, status, setStatus, businesses }) {
+  return (
+    <div className="job-filter-bar">
+      <label className="job-search">
+        <Icon name="Search" size={15} />
+        <input value={search} onChange={(event) => setSearch(event.target.value)} placeholder="搜索岗位、公司或业务方向" />
+        {search && <button onClick={() => setSearch("")} aria-label="清空搜索"><Icon name="X" size={14} /></button>}
+      </label>
+      <select value={business} onChange={(event) => setBusiness(event.target.value)}>
+        <option value="all">全部方向</option>
+        {businesses.map((item) => <option key={item} value={item}>{item}</option>)}
+      </select>
+      <select value={status} onChange={(event) => setStatus(event.target.value)}>
+        <option value="all">全部进度</option>
+        {JOB_STATUS_OPTIONS.map((item) => <option key={item.value} value={item.value}>{item.label}</option>)}
+      </select>
+    </div>
+  );
+}
+
+function JobDetail({ job, analysis, analysisOutdated, onBack, onAnalyze, onRewrite, onStatusChange }) {
+  return (
+    <div className="job-detail">
+      <div className="job-detail-toolbar">
+        <button className="job-back-button" onClick={onBack}><Icon name="ChevronLeft" size={16} /> 返回列表</button>
+        <div className="job-detail-source"><Icon name="Database" size={13} /> 来自 {job.source}</div>
+      </div>
+      <section className="job-detail-hero">
+        <div>
+          <div className="job-detail-title-row">
+            <h1>{job.title}</h1>
+            <span>{job.salary}</span>
+          </div>
+          <div className="job-detail-company"><Icon name="Building2" size={16} /> {job.company}</div>
+          <div className="job-detail-tags">
+            <JobPill><Icon name="MapPin" size={12} />{job.location}</JobPill>
+            <JobPill><Icon name="BriefcaseBusiness" size={12} />{job.experience}</JobPill>
+            <JobPill><Icon name="GraduationCap" size={12} />{job.education}</JobPill>
+            <JobPill tone="accent">{job.business}</JobPill>
+          </div>
+        </div>
+        <div className="job-detail-score-card">
+          <MatchScore score={analysis && analysis.score} />
+        </div>
+      </section>
+      <section className="job-progress-card">
+        <div>
+          <span className="job-section-icon"><Icon name="Milestone" size={16} /></span>
+          <div><strong>求职进度</strong><small>{job.nextActionAt ? `下一步：${job.nextActionAt}` : "暂未设置下一步安排"}</small></div>
+        </div>
+        <select value={job.status} onChange={(event) => onStatusChange(event.target.value)}>
+          {JOB_STATUS_OPTIONS.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
+        </select>
+      </section>
+      <div className="job-detail-grid">
+        <section className="job-detail-section">
+          <h2><span className="job-section-icon"><Icon name="ListChecks" size={16} /></span>工作职责</h2>
+          <ol>{job.responsibilities.map((item, index) => <li key={item}><span>{index + 1}</span>{item}</li>)}</ol>
+        </section>
+        <section className="job-detail-section">
+          <h2><span className="job-section-icon"><Icon name="BadgeCheck" size={16} /></span>任职要求</h2>
+          <ol>{job.requirements.map((item, index) => <li key={item}><span>{index + 1}</span>{item}</li>)}</ol>
+        </section>
+      </div>
+      <div className={`job-detail-action-bar ${analysis ? "has-analysis" : ""}`}>
+        <div className="job-detail-action-summary">
+          {analysis ? (
+            <>
+              <MatchScore score={analysis.score} compact />
+              <div>
+                <strong>{analysis.conclusion}</strong>
+                <span>{analysis.summary}</span>
+              </div>
+            </>
+          ) : (
+            <div>
+              <strong>基于当前简历进行岗位适配</strong>
+              <span>完成匹配分析后，将在这里展示结论摘要</span>
+            </div>
+          )}
+        </div>
+        <div className="job-detail-actions">
+          <button className="job-secondary-button" onClick={onAnalyze}><Icon name="ChartNoAxesCombined" size={15} />{analysis ? "重新分析" : "匹配度分析"}</button>
+          <button className="job-primary-button" onClick={onRewrite}><Icon name="Sparkles" size={15} />针对该岗位改写简历</button>
+        </div>
+      </div>
+      {analysisOutdated && (
+        <div className="analysis-outdated-banner">
+          <Icon name="History" size={15} />
+          当前结果基于旧版简历、岗位或模型配置，请重新分析后再用于投递判断。
+        </div>
+      )}
+    </div>
+  );
+}
+
+function RadarChart({ dimensions }) {
+  const size = 320;
+  const centerX = 160;
+  const centerY = 108;
+  const radius = 62;
+  const levels = [0.25, 0.5, 0.75, 1];
+  const shortNames = {
+    "核心职责": "核心职责",
+    "技能关键词": "技能",
+    "项目与成果": "项目成果",
+    "年限与职级": "年限职级",
+    "行业与业务": "行业业务",
+    "基础条件": "基础条件",
+    "地区与方向": "地区方向",
+  };
+  const pointAt = (index, ratio, extraRadius = 0) => {
+    const angle = -Math.PI / 2 + index * Math.PI * 2 / dimensions.length;
+    const distance = radius * ratio + extraRadius;
+    return {
+      x: centerX + Math.cos(angle) * distance,
+      y: centerY + Math.sin(angle) * distance,
+    };
+  };
+  const polygonPoints = (ratio) => dimensions
+    .map((item, index) => {
+      const point = pointAt(index, ratio);
+      return `${point.x},${point.y}`;
+    })
+    .join(" ");
+  const dataPoints = dimensions.map((item, index) => pointAt(index, item.score / 100));
+
+  return (
+    <div className="ai-radar-card">
+      <div className="ai-radar-heading">
+        <div><strong>能力匹配雷达</strong><span>各维度按满分比例展示</span></div>
+        <JobPill tone="accent">7 个维度</JobPill>
+      </div>
+      <svg className="ai-radar-chart" viewBox={`0 0 ${size} 220`} role="img" aria-label="职位匹配维度雷达图">
+        <g className="ai-radar-grid">
+          {levels.map((level) => <polygon key={level} points={polygonPoints(level)} />)}
+          {dimensions.map((item, index) => {
+            const edge = pointAt(index, 1);
+            return <line key={item.name} x1={centerX} y1={centerY} x2={edge.x} y2={edge.y} />;
+          })}
+        </g>
+        <polygon className="ai-radar-area" points={dataPoints.map((point) => `${point.x},${point.y}`).join(" ")} />
+        <g className="ai-radar-points">
+          {dataPoints.map((point, index) => <circle key={dimensions[index].name} cx={point.x} cy={point.y} r="3.5" />)}
+        </g>
+        <g className="ai-radar-labels">
+          {dimensions.map((item, index) => {
+            const point = pointAt(index, 1, 22);
+            const ratio = Math.round(item.score);
+            const anchor = point.x < centerX - 12 ? "end" : point.x > centerX + 12 ? "start" : "middle";
+            return (
+              <text key={item.name} x={point.x} y={point.y} textAnchor={anchor}>
+                <tspan x={point.x} dy="0">{shortNames[item.name] || item.name}</tspan>
+                <tspan className="ai-radar-label-score" x={point.x} dy="13">{ratio}%</tspan>
+              </text>
+            );
+          })}
+        </g>
+      </svg>
+    </div>
+  );
+}
+
+function AnalysisResult({ result, outdated }) {
+  return (
+    <div className="ai-result">
+      {outdated && (
+        <div className="analysis-outdated-banner is-compact">
+          <Icon name="History" size={14} />这是历史分析结果，当前输入已发生变化。
+        </div>
+      )}
+      <div className="ai-score-panel">
+        <div className="ai-score-ring" style={{ "--score": result.score }}>
+          <strong>{result.score}</strong><span>%</span>
+        </div>
+        <div>
+          <JobPill tone={outdated ? "warning" : "accent"}>{outdated ? "结果已过期" : "最新分析"}</JobPill>
+          <h3>{result.conclusion}</h3>
+          <p>{result.summary}</p>
+        </div>
+      </div>
+      <RadarChart dimensions={result.dimensions} />
+      <div className="ai-insight-block is-positive">
+        <h4><Icon name="CircleCheck" size={15} />匹配优势</h4>
+        {result.strengths.map((item) => <p key={item}>{item}</p>)}
+      </div>
+      <div className="ai-insight-block is-warning">
+        <h4><Icon name="TriangleAlert" size={15} />关键缺口</h4>
+        {result.gaps.map((item) => <p key={item}>{item}</p>)}
+      </div>
+      <div className="ai-insight-block">
+        <h4><Icon name="Lightbulb" size={15} />投递前建议</h4>
+        {result.suggestions.map((item) => <p key={item}>{item}</p>)}
+      </div>
+    </div>
+  );
+}
+
+function RewriteResult({ result }) {
+  return (
+    <div className="ai-result">
+      <div className="rewrite-strategy">
+        <span className="job-section-icon"><Icon name="WandSparkles" size={16} /></span>
+        <div><strong>本次改写策略</strong><p>{result.strategy}</p></div>
+      </div>
+      <div className="rewrite-keywords">
+        {result.keywords.map((item) => <JobPill key={item} tone="accent">{item}</JobPill>)}
+      </div>
+      {result.items.map((item) => (
+        <article className="rewrite-card" key={item.section}>
+          <div className="rewrite-card-head">
+            <span>{item.section}</span>
+            <JobPill tone={item.risk === "低风险" ? "success" : "warning"}>{item.risk}</JobPill>
+          </div>
+          <div className="rewrite-copy original"><small>原文</small><p>{item.original}</p></div>
+          <div className="rewrite-arrow"><Icon name="ArrowDown" size={15} /></div>
+          <div className="rewrite-copy suggested"><small>建议稿</small><p>{item.rewritten}</p></div>
+          <div className="rewrite-reason"><Icon name="Info" size={13} />{item.reason}</div>
+          <button className="rewrite-copy-button" onClick={() => navigator.clipboard && navigator.clipboard.writeText(item.rewritten)}>
+            <Icon name="Copy" size={13} />复制建议稿
+          </button>
+        </article>
+      ))}
+    </div>
+  );
+}
+
+const CHAT_SUGGESTIONS = [
+  "我的哪些项目经历最适合优先展示？",
+  "这个岗位最关键的能力缺口是什么？",
+  "面试时应该如何解释这些缺口？",
+  "如何优化当前项目描述？",
+];
+
+function ChatConversation({ messages, outdated, loading, error, onSuggestion, onRetry, onClear }) {
+  const listRef = React.useRef(null);
+
+  React.useEffect(() => {
+    const container = listRef.current;
+    if (container) container.scrollTop = container.scrollHeight;
+  }, [messages, loading, error]);
+
+  return (
+    <div className="assistant-chat" ref={listRef}>
+      <div className="assistant-chat-toolbar">
+        <div>
+          <strong>岗位追问</strong>
+          <span>基于当前 JD、工作经历和匹配结果</span>
+        </div>
+        {!!messages.length && (
+          <button onClick={onClear}><Icon name="Trash2" size={13} />清空</button>
+        )}
+      </div>
+      {outdated && !!messages.length && (
+        <div className="analysis-outdated-banner is-compact">
+          <Icon name="History" size={14} />
+          这些消息基于旧版上下文；再次发送将自动开始新对话。
+        </div>
+      )}
+      {!messages.length ? (
+        <div className="assistant-chat-empty">
+          <span><Icon name="MessagesSquare" size={24} /></span>
+          <h3>继续追问当前职位</h3>
+          <p>AI 会结合岗位、脱敏工作经历和匹配分析回答。</p>
+          <div className="assistant-suggestions">
+            {CHAT_SUGGESTIONS.map((item) => (
+              <button key={item} onClick={() => onSuggestion(item)}>{item}</button>
+            ))}
+          </div>
+        </div>
+      ) : (
+        <div className="assistant-message-list">
+          {messages.map((message, index) => (
+            <div className={`assistant-message is-${message.role}`} key={`${message.role}-${index}-${message.content.slice(0, 18)}`}>
+              <div className="assistant-message-label">{message.role === "user" ? "你" : "AI 助手"}</div>
+              <div className="assistant-message-bubble">{window.normalizePlainTextResponse(message.content)}</div>
+            </div>
+          ))}
+          {loading && (
+            <div className="assistant-message is-assistant">
+              <div className="assistant-message-label">AI 助手</div>
+              <div className="assistant-message-bubble is-thinking">
+                <Icon name="LoaderCircle" size={14} className="animate-spin" />正在思考…
+              </div>
+            </div>
+          )}
+          {error && (
+            <div className="assistant-chat-error">
+              <Icon name="CircleAlert" size={14} />
+              <span>{error.message}</span>
+              <button onClick={onRetry}><Icon name="RotateCcw" size={12} />重试</button>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
+}
+
+function JobAssistant({
+  job,
+  resumeName,
+  task,
+  loading,
+  analysis,
+  analysisOutdated,
+  rewrite,
+  chat,
+  chatOutdated,
+  chatLoading,
+  chatError,
+  onAnalyze,
+  onRewrite,
+  onOpenChat,
+  onSendChat,
+  onRetryChat,
+  onClearChat,
+}) {
+  const [draft, setDraft] = React.useState("");
+
+  React.useEffect(() => {
+    setDraft("");
+  }, [job.id]);
+
+  const submitPrompt = (preset) => {
+    const source = typeof preset === "string" ? preset : draft;
+    const value = source.trim();
+    if (!value || chatLoading) return;
+    setDraft("");
+    onSendChat(value);
+  };
+
+  return (
+    <aside className="job-assistant">
+      <div className="assistant-header">
+        <div className="assistant-avatar"><Icon name="Sparkles" size={19} /></div>
+        <div><strong>简历 AI 助手</strong><span>基于职位与当前简历提供建议</span></div>
+      </div>
+      <div className="assistant-context">
+        <div><span>引用职位</span><strong>{job.company} · {job.title}</strong></div>
+        <div><span>当前简历</span><strong>{resumeName}</strong></div>
+      </div>
+      <div className="assistant-task-tabs">
+        <button className={task === "analysis" ? "is-active" : ""} onClick={onAnalyze}>
+          <Icon name="ChartNoAxesCombined" size={14} />匹配分析
+        </button>
+        <button className={task === "rewrite" ? "is-active" : ""} onClick={onRewrite}>
+          <Icon name="Sparkles" size={14} />简历改写
+        </button>
+        <button className={task === "chat" ? "is-active" : ""} onClick={onOpenChat}>
+          <Icon name="MessagesSquare" size={14} />继续追问
+        </button>
+      </div>
+      <div className="assistant-body">
+        {task === "chat" ? (
+          <ChatConversation
+            messages={chat?.messages || []}
+            outdated={chatOutdated}
+            loading={chatLoading}
+            error={chatError}
+            onSuggestion={submitPrompt}
+            onRetry={onRetryChat}
+            onClear={onClearChat}
+          />
+        ) : loading ? (
+          <div className="assistant-loading">
+            <span><Icon name="LoaderCircle" size={20} className="animate-spin" /></span>
+            <strong>{task === "analysis" ? "正在分析职位匹配度" : "正在生成简历改写建议"}</strong>
+            <p>正在比对 JD 要求与简历证据，请稍候。</p>
+            <i><b /></i>
+          </div>
+        ) : task === "analysis" && analysis ? (
+          <AnalysisResult result={analysis} outdated={analysisOutdated} />
+        ) : task === "rewrite" && rewrite ? (
+          <RewriteResult result={rewrite} />
+        ) : (
+          <div className="assistant-empty">
+            <span><Icon name="Bot" size={27} /></span>
+            <h3>从当前职位开始</h3>
+            <p>点击下方功能，AI 将读取职位 JD 与当前简历，并在这里展示结构化结果。</p>
+            <button className="job-primary-button" onClick={onAnalyze}><Icon name="ChartNoAxesCombined" size={15} />匹配度分析</button>
+            <button className="job-secondary-button" onClick={onRewrite}><Icon name="Sparkles" size={15} />简历改写</button>
+          </div>
+        )}
+      </div>
+      <div className="assistant-input">
+        <div className="assistant-input-meta">
+          <span><Icon name="BriefcaseBusiness" size={13} />引用职位：{job.title}</span>
+          <span>{draft.length} / 1000</span>
+        </div>
+        <label>
+          <textarea
+            value={draft}
+            onChange={(event) => setDraft(event.target.value)}
+            maxLength={1000}
+            disabled={chatLoading}
+            onKeyDown={(event) => {
+              if (event.key === "Enter" && !event.shiftKey) {
+                event.preventDefault();
+                submitPrompt();
+              }
+            }}
+            placeholder="继续追问，例如：我的哪些项目经历最适合优先展示？"
+            rows={3}
+          />
+          <button onClick={submitPrompt} disabled={!draft.trim() || chatLoading} aria-label="发送追问">
+            <Icon name={chatLoading ? "LoaderCircle" : "ArrowUp"} size={17} className={chatLoading ? "animate-spin" : ""} />
+          </button>
+        </label>
+        <small>Enter 发送 · Shift + Enter 换行 · 仅上传脱敏工作经历 · 使用前请核对事实</small>
+      </div>
+    </aside>
+  );
+}
+
+function createRewrite(job) {
+  return {
+    strategy: `围绕「${job.business}」强化 AI 产品规划、模型能力落地和数据驱动迭代，同时保留原简历中的真实项目与量化结果。`,
+    keywords: ["AI 产品规划", job.business, "数据驱动", "跨团队协作"],
+    items: [
+      {
+        section: "个人优势",
+        risk: "低风险",
+        original: "8 年互联网产品经验，曾主导从 0 到 1 的多个明星项目，覆盖 B 端与 C 端业务。",
+        rewritten: `8 年互联网产品经验，具备 AI 产品从 0 到 1 规划与落地能力，覆盖用户场景拆解、模型能力设计、跨团队交付及数据效果验证。`,
+        reason: `突出与「${job.title}」核心职责直接相关的 AI 产品全流程能力，未增加新的经历事实。`,
+      },
+      {
+        section: "AI 聊天助手 · 项目总结",
+        risk: "低风险",
+        original: "主导 AI 聊天助手从 0 到 1 落地，定位陌生人社交匹配后的会话转化问题。",
+        rewritten: "主导 AI 聊天助手从 0 到 1 落地，围绕破冰、回复与会话重启场景设计 LLM 产品链路，推动双向会话渗透率由 45% 提升至 52%，大盘 7 日留存提升 2pp。",
+        reason: "将场景、方法和结果集中在首句，帮助招聘方快速识别相关性。",
+      },
+    ],
+  };
+}
+
+function JobsWorkspace({ resumeData, onToast }) {
+  const [jobs, setJobs] = React.useState(MOCK_JOBS);
+  const [selectedId, setSelectedId] = React.useState(MOCK_JOBS[0].id);
+  const [detailOpen, setDetailOpen] = React.useState(false);
+  const [search, setSearch] = React.useState("");
+  const [business, setBusiness] = React.useState("all");
+  const [status, setStatus] = React.useState("all");
+  const [analysisCache, setAnalysisCache] = React.useState(loadMatchAnalysisCache);
+  const [chatCache, setChatCache] = React.useState(loadJobChatCache);
+  const [chatLoading, setChatLoading] = React.useState(false);
+  const [chatError, setChatError] = React.useState(null);
+  const [rewrites, setRewrites] = React.useState({});
+  const [task, setTask] = React.useState(null);
+  const [loading, setLoading] = React.useState(false);
+  const [lastSyncedAt, setLastSyncedAt] = React.useState("21:18 已同步");
+  const timerRef = React.useRef(null);
+
+  React.useEffect(() => () => clearTimeout(timerRef.current), []);
+
+  const selectedJob = jobs.find((job) => job.id === selectedId) || jobs[0];
+  const serializedResume = React.useMemo(
+    () => window.serializeResumeForAnalysis(resumeData),
+    [resumeData]
+  );
+  const resumeHash = React.useMemo(
+    () => window.hashAnalysisInput(serializedResume),
+    [serializedResume]
+  );
+  const config = window.loadLLMConfig ? window.loadLLMConfig() : null;
+  const modelKey = window.getModelCacheKey(config);
+  const analyses = React.useMemo(() => Object.keys(analysisCache).reduce((result, jobId) => {
+    if (analysisCache[jobId]?.result) result[jobId] = analysisCache[jobId].result;
+    return result;
+  }, {}), [analysisCache]);
+  const getJobHash = (job) => window.hashAnalysisInput(window.serializeJobForAnalysis(job));
+  const isAnalysisOutdated = (job) => {
+    const cached = analysisCache[job.id];
+    if (!cached) return false;
+    return cached.resumeHash !== resumeHash
+      || cached.jobHash !== getJobHash(job)
+      || cached.modelKey !== modelKey
+      || cached.analysisVersion !== window.MATCH_ANALYSIS_VERSION;
+  };
+  const isChatOutdated = (job) => {
+    const cached = chatCache[job.id];
+    if (!cached) return false;
+    return cached.resumeHash !== resumeHash
+      || cached.jobHash !== getJobHash(job)
+      || cached.modelKey !== modelKey
+      || cached.chatVersion !== window.JOB_CHAT_VERSION;
+  };
+  const businesses = Array.from(new Set(jobs.map((job) => job.business)));
+  const visibleJobs = jobs
+    .filter((job) => {
+      const keyword = search.trim().toLowerCase();
+      const hitSearch = !keyword || `${job.title} ${job.company} ${job.business}`.toLowerCase().includes(keyword);
+      return hitSearch && (business === "all" || job.business === business) && (status === "all" || job.status === status);
+    });
+
+  const updateStatus = (jobId, value) => {
+    setJobs((previous) => previous.map((job) => job.id === jobId ? { ...job, status: value } : job));
+    onToast && onToast(`求职进度已更新为「${jobStatusLabel(value)}」`);
+  };
+
+  const runTask = async (nextTask, job = selectedJob) => {
+    clearTimeout(timerRef.current);
+    setSelectedId(job.id);
+    setTask(nextTask);
+    setLoading(true);
+
+    try {
+      if (nextTask === "analysis") {
+        if (!config || !config.apiKey) throw new Error("请先在设置中配置模型和 API Key");
+        const serializedJob = window.serializeJobForAnalysis(job);
+        const prompt = window.buildAnalysisPrompt(serializedResume, serializedJob);
+        const raw = await window.callLLM(config, [{ role: "user", content: prompt }], {
+          temperature: 0.2,
+          maxTokens: 4096,
+        });
+        const apiResult = JSON.parse(window.extractJSON(raw));
+        const result = window.validateAnalysisResult(apiResult);
+        const entry = {
+          result,
+          resumeHash,
+          jobHash: window.hashAnalysisInput(serializedJob),
+          modelKey,
+          analysisVersion: window.MATCH_ANALYSIS_VERSION,
+          analyzedAt: new Date().toISOString(),
+        };
+        setAnalysisCache((previous) => persistMatchAnalysisCache({
+          ...previous,
+          [job.id]: entry,
+        }));
+        onToast && onToast("匹配度分析已完成并缓存");
+      } else {
+        // 简历改写（待接入）
+        setRewrites((previous) => ({ ...previous, [job.id]: createRewrite(job) }));
+        onToast && onToast("简历改写建议已生成");
+      }
+    } catch (err) {
+      onToast && onToast("分析失败：" + (err.message || "未知错误"));
+      if (nextTask !== "analysis") {
+        setRewrites((previous) => ({ ...previous, [job.id]: createRewrite(job) }));
+      }
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const sendFollowUp = async (question, options = {}) => {
+    const value = String(question || "").trim();
+    if (!value || chatLoading) return;
+    if (value.length > 1000) {
+      onToast && onToast("单次追问不能超过 1000 字");
+      return;
+    }
+
+    const job = selectedJob;
+    const currentConfig = window.loadLLMConfig ? window.loadLLMConfig() : null;
+    if (!currentConfig || !currentConfig.apiKey) {
+      onToast && onToast("发送失败：请先在设置中配置模型和 API Key");
+      return;
+    }
+
+    const currentModelKey = window.getModelCacheKey(currentConfig);
+    const serializedJob = window.serializeJobForAnalysis(job);
+    const jobHash = window.hashAnalysisInput(serializedJob);
+    const existing = chatCache[job.id];
+    const contextMatches = existing
+      && existing.resumeHash === resumeHash
+      && existing.jobHash === jobHash
+      && existing.modelKey === currentModelKey
+      && existing.chatVersion === window.JOB_CHAT_VERSION;
+    let history = contextMatches && Array.isArray(existing.messages) ? existing.messages : [];
+    if (options.retry && history.at(-1)?.role === "user" && history.at(-1)?.content === value) {
+      history = history.slice(0, -1);
+    }
+    history = history.slice(-18);
+
+    const userMessage = { role: "user", content: value };
+    const pendingEntry = {
+      resumeHash,
+      jobHash,
+      modelKey: currentModelKey,
+      chatVersion: window.JOB_CHAT_VERSION,
+      messages: [...history, userMessage],
+      updatedAt: new Date().toISOString(),
+    };
+    setTask("chat");
+    setChatError(null);
+    setChatLoading(true);
+    setChatCache((previous) => persistJobChatCache({ ...previous, [job.id]: pendingEntry }));
+
+    try {
+      const requestMessages = window.buildFollowUpMessages({
+        resumeData: serializedResume,
+        jobData: serializedJob,
+        analysis: analyses[job.id] || null,
+        history,
+        question: value,
+      });
+      const answer = window.normalizePlainTextResponse(await window.callLLM(currentConfig, requestMessages, {
+        temperature: 0.3,
+        maxTokens: 1600,
+      }));
+      if (!answer) throw new Error("模型未返回有效内容");
+
+      const completedEntry = {
+        ...pendingEntry,
+        messages: [...history, userMessage, { role: "assistant", content: answer }],
+        updatedAt: new Date().toISOString(),
+      };
+      setChatCache((previous) => persistJobChatCache({ ...previous, [job.id]: completedEntry }));
+    } catch (error) {
+      setChatError({
+        jobId: job.id,
+        question: value,
+        message: error.message || "模型请求失败，请重试",
+      });
+    } finally {
+      setChatLoading(false);
+    }
+  };
+
+  const clearChat = (jobId) => {
+    setChatError(null);
+    setChatCache((previous) => {
+      const next = { ...previous };
+      delete next[jobId];
+      return persistJobChatCache(next);
+    });
+    onToast && onToast("当前职位对话已清空");
+  };
+
+  return (
+    <main className="jobs-workspace">
+      <section className="jobs-main">
+        <JobsHeader
+          visibleCount={visibleJobs.length}
+          totalCount={jobs.length}
+          lastSyncedAt={lastSyncedAt}
+          onRefresh={() => {
+            setLastSyncedAt("刚刚已同步");
+            onToast && onToast("飞书职位数据已刷新");
+          }}
+        />
+        {detailOpen ? (
+          <div className="jobs-content-scroll">
+            <JobDetail
+              job={selectedJob}
+              analysis={analyses[selectedJob.id]}
+              analysisOutdated={isAnalysisOutdated(selectedJob)}
+              onBack={() => setDetailOpen(false)}
+              onAnalyze={() => runTask("analysis")}
+              onRewrite={() => runTask("rewrite")}
+              onStatusChange={(value) => updateStatus(selectedJob.id, value)}
+            />
+          </div>
+        ) : (
+          <>
+            <JobFilters
+              search={search} setSearch={setSearch}
+              business={business} setBusiness={setBusiness}
+              status={status} setStatus={setStatus}
+              businesses={businesses}
+            />
+            <div className="jobs-content-scroll job-list">
+              {visibleJobs.length ? visibleJobs.map((job) => (
+                <JobListCard
+                  key={job.id}
+                  job={job}
+                  selected={job.id === selectedId}
+                  analysis={analyses[job.id]}
+                  analysisOutdated={isAnalysisOutdated(job)}
+                  onSelect={() => {
+                    setSelectedId(job.id);
+                    setDetailOpen(true);
+                    setChatError(null);
+                    setTask(analyses[job.id] ? "analysis" : rewrites[job.id] ? "rewrite" : null);
+                  }}
+                  onAnalyze={() => runTask("analysis", job)}
+                  onRewrite={() => runTask("rewrite", job)}
+                  onStatusChange={(value) => updateStatus(job.id, value)}
+                />
+              )) : (
+                <div className="jobs-empty-state">
+                  <span><Icon name="SearchX" size={26} /></span>
+                  <h3>没有找到符合条件的职位</h3>
+                  <p>尝试调整关键词或筛选条件。</p>
+                  <button onClick={() => { setSearch(""); setBusiness("all"); setStatus("all"); }}>清除筛选</button>
+                </div>
+              )}
+            </div>
+          </>
+        )}
+      </section>
+      <JobAssistant
+        job={selectedJob}
+        resumeName={resumeData.resumeName || "当前简历"}
+        task={task}
+        loading={loading}
+        analysis={analyses[selectedJob.id]}
+        analysisOutdated={isAnalysisOutdated(selectedJob)}
+        rewrite={rewrites[selectedJob.id]}
+        chat={chatCache[selectedJob.id]}
+        chatOutdated={isChatOutdated(selectedJob)}
+        chatLoading={chatLoading}
+        chatError={chatError?.jobId === selectedJob.id ? chatError : null}
+        onAnalyze={() => runTask("analysis")}
+        onRewrite={() => runTask("rewrite")}
+        onOpenChat={() => {
+          setTask("chat");
+          setChatError(null);
+        }}
+        onSendChat={(question) => sendFollowUp(question)}
+        onRetryChat={() => chatError && sendFollowUp(chatError.question, { retry: true })}
+        onClearChat={() => clearChat(selectedJob.id)}
+      />
+    </main>
+  );
+}
+
+// 导出 API 层供 settings 面板和外部使用
+window.callLLM = window.callLLM || function() { throw new Error("callLLM not loaded"); };
+window.extractJSON = window.extractJSON || function() { throw new Error("extractJSON not loaded"); };
+window.buildAnalysisPrompt = window.buildAnalysisPrompt || function() { throw new Error("buildAnalysisPrompt not loaded"); };
+window.buildRewritePrompt = window.buildRewritePrompt || function() { throw new Error("buildRewritePrompt not loaded"); };
+window.buildFollowUpMessages = window.buildFollowUpMessages || function() { throw new Error("buildFollowUpMessages not loaded"); };
+window.normalizePlainTextResponse = window.normalizePlainTextResponse || function(value) { return String(value || ""); };
+window.testConnection = window.testConnection || function() { throw new Error("testConnection not loaded"); };
+
+window.JobsWorkspace = JobsWorkspace;

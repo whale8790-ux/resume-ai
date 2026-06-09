@@ -1,0 +1,24 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <meta
+    http-equiv="Content-Security-Policy"
+    content="default-src 'self' data: blob:; script-src 'self' 'unsafe-eval'; style-src 'self' 'unsafe-inline'; img-src 'self' data: blob:; font-src 'self' data:; connect-src 'self' https: http://127.0.0.1:* http://localhost:*;"
+  />
+  <title>AI 简历编辑器</title>
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><rect width=%2732%27 height=%2732%27 rx=%276%27 fill=%27%230d9488%27/><text x=%2716%27 y=%2722%27 text-anchor=%27middle%27 font-size=%2718%27 font-weight=%27bold%27 fill=%27white%27 font-family=%27system-ui%27>R</text></svg>" />
+  <link rel="stylesheet" href="assets/tailwind.css" />
+  <link rel="stylesheet" href="assets/app.css" />
+  <script src="vendor/lucide-0.487.0.min.js"></script>
+  <script src="vendor/html2canvas-1.4.1.min.js"></script>
+  <script src="vendor/jspdf-2.5.1.umd.min.js"></script>
+  <script src="vendor/react-18.3.1.development.js"></script>
+  <script src="vendor/react-dom-18.3.1.development.js"></script>
+</head>
+<body>
+  <div id="root"></div>
+  <script src="dist/app.js"></script>
+</body>
+</html>

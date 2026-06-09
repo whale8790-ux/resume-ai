@@ -1,0 +1,41 @@
+{
+  "schemaVersion": 1,
+  "libraryId": "example_ai_pm_library",
+  "libraryName": "AI 产品经理面试题库示例",
+  "projects": [
+    {
+      "id": "example_project",
+      "name": "AI 产品设计",
+      "description": "需求判断与效果评估",
+      "tags": ["AI", "产品设计"],
+      "questions": [
+        {
+          "id": "example_question",
+          "question": "什么样的需求适合使用大模型解决？",
+          "category": "需求判断",
+          "tags": ["LLM", "场景判断"],
+          "intent": "考察候选人对大模型能力边界和产品价值的理解。",
+          "questionType": "方法题",
+          "answerFramework": [
+            "明确用户任务和核心问题",
+            "判断大模型能力是否匹配",
+            "评估错误成本和结果可验证性",
+            "设计兜底方案并通过实验验证"
+          ],
+          "referenceAnswer": "先判断任务是否涉及非结构化理解或开放式生成，再评估准确性、成本、延迟和风险是否可控。最后通过最小实验验证用户价值，而不是只根据技术可行性决策。",
+          "followUps": [
+            {
+              "id": "example_followup",
+              "question": "如果模型效果不稳定，你会如何设计产品兜底？",
+              "referenceAnswer": "可以通过规则校验、人工确认、结果重试、降级方案和风险提示控制错误影响。"
+            }
+          ],
+          "riskPoints": [
+            "只讨论模型能力，不讨论用户价值",
+            "忽略错误成本和兜底机制"
+          ]
+        }
+      ]
+    }
+  ]
+}
